@@ -1,11 +1,15 @@
+import os
 
+SRCDIR = os.path.dirname(__file__)
 
 #  The path to the ROM file to load:
 #  SpaceInvaders starts to render visible pixels when
 #  the cpu halfClkCount reaches about 11000
-#romFile = 'roms/SpaceInvaders.bin'
-#romFile = 'roms/Pitfall.bin'
-romFile = 'roms/DonkeyKong.bin'
+ROMS_DONKEY_KONG = os.path.join(SRCDIR, 'roms/DonkeyKong.bin')
+ROMS_SPACE_INVADERS = os.path.join(SRCDIR, 'roms/SpaceInvaders.bin')
+ROMS_PITFALL = os.path.join(SRCDIR, 'roms/Pitfall.bin')
+
+romFile = ROMS_DONKEY_KONG
 #  8kb ROM, spins reading 0x282 switches
 #romFile = 'roms/Asteroids.bin'
 #  2kb ROM
@@ -19,8 +23,8 @@ imageOutputDir = 'outFrames'
 # Also contains names for various wires, some of which are the
 # chips input and output pads.
 # 
-chip6502File = 'chips/net_6502.pkl'
-chipTIAFile  = 'chips/net_TIA.pkl'
+chip6502File = os.path.join(SRCDIR, 'chips/net_6502.pkl')
+chipTIAFile  = os.path.join(SRCDIR, 'chips/net_TIA.pkl')
  
 # How many simulation clock changes to run between updates
 # of the OpenGL rendering.
