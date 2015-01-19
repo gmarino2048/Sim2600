@@ -137,7 +137,7 @@ class NmosFet:
 
 
 
-class CircuitSimulatorBase:
+class CircuitSimulator(object):
     def __init__(self):
         self.name = ''
         self.wireList = None        # wireList[i] is a Wire.  wireList[i].index = i
@@ -277,16 +277,6 @@ class CircuitSimulatorBase:
                         print(msg)
                         break
             if needNewArray:
-                self.recalcArray = [False] * len(self.recalcArray)
-
-    def doWireRecalc(self, wireIndex):
-        raise RuntimeError('This method should be overridden by a derived class')
-
-    def turnTransistorOn(self, t):
-        raise RuntimeError('This method should be overridden by a derived class')
-
-    def turnTransistorOff(self, t):
-        raise RuntimeError('This method should be overridden by a derived class')
                 self.recalcArray = np.zeros_like(self.recalcArray) # [False] * len(self.recalcArray)
 
     def floatWire(self, n):
@@ -580,11 +570,6 @@ class CircuitSimulatorBase:
         of = open(filePath, 'wb')
         pickle.dump(rootObj, of)
         of.close()
-
-
-class CircuitSimulator(CircuitSimulatorBase):
-    def __init__(self):
-        CircuitSimulatorBase.__init__(self)
 
     def doWireRecalc(self, wireIndex):
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
