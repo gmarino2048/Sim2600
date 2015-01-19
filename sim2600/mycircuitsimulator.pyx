@@ -63,17 +63,17 @@ cdef class Wire:
                self.state, str(self.ctInds), str(self.gateInds))
         return rstr
 
-    def setHigh(self):
+    def _setHigh(self):
         """ Used to pin a pad or external input high """
         self.pulled = PULLED_HIGH
         self.state  = PULLED_HIGH
 
-    def setLow(self):
+    def _setLow(self):
         """ Used to pin a pad or external input low """
         self.pulled = PULLED_LOW
         self.state  = PULLED_LOW
 
-    def setPulledHighOrLow(self, boolHigh):
+    def _setPulledHighOrLow(self, boolHigh):
         """ Used to pin a pad or external input high or low """
         if boolHigh == True:
             self.pulled = PULLED_HIGH
@@ -84,19 +84,20 @@ cdef class Wire:
         else:
             raise Exception('Arg to setPulledHighOrLow is not True or False')
 
-    def isHigh(self):
+    def _isHigh(self):
         if self.state == FLOATING_HIGH or \
            self.state == PULLED_HIGH or \
            self.state == HIGH:
             return True
         return False
         
-    def isLow(self):
+    def _isLow(self):
         if self.state == FLOATING_LOW or \
            self.state == PULLED_LOW or \
            self.state == GROUNDED:
             return True
         return False
+
 
     property gateInds:
         def __get__(self):
@@ -231,7 +232,7 @@ class CircuitSimulator(object):
             for wireIndex in self.recalcOrderStack:
                 self.newRecalcArray[wireIndex] = 0
 
-                self.doWireRecalc(wireIndex)
+                self._doWireRecalc(wireIndex)
 
                 self.recalcArray[wireIndex] = False
                 self.numWiresRecalculated += 1
@@ -300,20 +301,20 @@ class CircuitSimulator(object):
     def setHighWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            self._wireList[wireIndex].setHigh()
+            self._wireList[wireIndex]._setHigh()
             return
 
         assert type(n) == type(1), 'wire thing %s'%str(n)
         wire = self._wireList[n]
         if wire != None:
-            wire.setHigh()
+            wire._setHigh()
         else:
             print 'ERROR - trying to set wire None high'
 
     def setLowWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            self._wireList[wireIndex].setLow()
+            self._wireList[wireIndex]._setLow()
             return
 
         assert type(n) == type(1), 'wire thing %s'%str(n)
@@ -324,30 +325,30 @@ class CircuitSimulator(object):
             print 'ERROR - trying to set wire None low'
 
     def setHigh(self, wireIndex):
-        self._wireList[wireIndex].setPulledHighOrLow(True)
+        self._wireList[wireIndex]._setPulledHighOrLow(True)
 
     def setLow(self, wireIndex):
-        self._wireList[wireIndex].setPulledHighOrLow(False)
+        self._wireList[wireIndex]._setPulledHighOrLow(False)
 
     def setPulled(self, wireIndex, boolHighOrLow):
-        self._wireList[wireIndex].setPulledHighOrLow(boolHighOrLow)
+        self._wireList[wireIndex]._setPulledHighOrLow(boolHighOrLow)
                 
     def setPulledHigh(self, wireIndex):
-        self._wireList[wireIndex].setPulledHighOrLow(True)
+        self._wireList[wireIndex]._setPulledHighOrLow(True)
 
     def setPulledLow(self, wireIndex):
-        self._wireList[wireIndex].setPulledHighOrLow(False)
+        self._wireList[wireIndex]._setPulledHighOrLow(False)
         
     def isHigh(self, wireIndex):
-        return self._wireList[wireIndex].isHigh()
+        return self._wireList[wireIndex]._isHigh()
 
     def isLow(self, wireIndex):
-        return self._wireList[wireIndex].isLow()
+        return self._wireList[wireIndex]._isLow()
 
     def isHighWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            return self._wireList[wireIndex].isHigh()
+            return self._wireList[wireIndex]._isHigh()
 
         assert type(n) == type(1), 'ERROR: if arg to isHigh is not in ' + \
             'wireNames, it had better be an integer'
@@ -358,7 +359,7 @@ class CircuitSimulator(object):
     def isLowWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            return self._wireList[wireIndex].isLow()
+            return self._wireList[wireIndex]._isLow()
 
         wire = self._wireList[n]
         assert wire != None
@@ -575,7 +576,7 @@ class CircuitSimulator(object):
         of.close()
 
 
-    def doWireRecalc(self, wireIndex):
+    def _doWireRecalc(self, wireIndex):
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
 
