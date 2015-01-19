@@ -116,6 +116,7 @@ cdef class Wire:
         def __get__(self):
             return self.pulled
 
+
 class NmosFet:
     GATE_LOW  = 0
     GATE_HIGH = 1 << 0
@@ -140,8 +141,8 @@ class NmosFet:
 class CircuitSimulator(object):
     def __init__(self):
         self.name = ''
-        self.wireList = None        # wireList[i] is a Wire.  wireList[i].index = i
-        self.transistorList = None
+        self._wireList = None        # wireList[i] is a Wire.  wireList[i].index = i
+        self._transistorList = None
         self.wireNames = dict()     # key is string wire names, value is integer wire index
         self.halfClkCount = 0       # the number of half clock cycles (low to high or high to low)
                                     # that the simulation has run
@@ -178,14 +179,14 @@ class CircuitSimulator(object):
     def recalcAllWires(self):
         """ Not fast.  Meant only for setting initial conditions """
         wireInds = []
-        for ind, wire in enumerate(self.wireList):
+        for ind, wire in enumerate(self._wireList):
             if wire != None:
                 wireInds.append(ind)
         self.recalcWireList (wireInds)
         
     def prepForRecalc(self):
         if self.recalcArray == None:
-            self.recalcCap = len(self.transistorList)
+            self.recalcCap = len(self._transistorList)
             # Using lists [] for these is faster than using array('B'/'L', ...)
             self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
             self.recalcOrderStack = []
@@ -281,7 +282,7 @@ class CircuitSimulator(object):
 
 
     def floatWire(self, n):
-        wire = self.wireList[n]
+        wire = self._wireList[n]
 
         if wire.pulled == PULLED_HIGH:
             wire.state = PULLED_HIGH
@@ -299,11 +300,11 @@ class CircuitSimulator(object):
     def setHighWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            self.wireList[wireIndex].setHigh()
+            self._wireList[wireIndex].setHigh()
             return
 
         assert type(n) == type(1), 'wire thing %s'%str(n)
-        wire = self.wireList[n]
+        wire = self._wireList[n]
         if wire != None:
             wire.setHigh()
         else:
@@ -312,54 +313,54 @@ class CircuitSimulator(object):
     def setLowWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            self.wireList[wireIndex].setLow()
+            self._wireList[wireIndex].setLow()
             return
 
         assert type(n) == type(1), 'wire thing %s'%str(n)
-        wire = self.wireList[n]
+        wire = self._wireList[n]
         if wire != None:
             wire.setLow()
         else:
             print 'ERROR - trying to set wire None low'
 
     def setHigh(self, wireIndex):
-        self.wireList[wireIndex].setPulledHighOrLow(True)
+        self._wireList[wireIndex].setPulledHighOrLow(True)
 
     def setLow(self, wireIndex):
-        self.wireList[wireIndex].setPulledHighOrLow(False)
+        self._wireList[wireIndex].setPulledHighOrLow(False)
 
     def setPulled(self, wireIndex, boolHighOrLow):
-        self.wireList[wireIndex].setPulledHighOrLow(boolHighOrLow)
+        self._wireList[wireIndex].setPulledHighOrLow(boolHighOrLow)
                 
     def setPulledHigh(self, wireIndex):
-        self.wireList[wireIndex].setPulledHighOrLow(True)
+        self._wireList[wireIndex].setPulledHighOrLow(True)
 
     def setPulledLow(self, wireIndex):
-        self.wireList[wireIndex].setPulledHighOrLow(False)
+        self._wireList[wireIndex].setPulledHighOrLow(False)
         
     def isHigh(self, wireIndex):
-        return self.wireList[wireIndex].isHigh()
+        return self._wireList[wireIndex].isHigh()
 
     def isLow(self, wireIndex):
-        return self.wireList[wireIndex].isLow()
+        return self._wireList[wireIndex].isLow()
 
     def isHighWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            return self.wireList[wireIndex].isHigh()
+            return self._wireList[wireIndex].isHigh()
 
         assert type(n) == type(1), 'ERROR: if arg to isHigh is not in ' + \
             'wireNames, it had better be an integer'
-        wire = self.wireList[n]
+        wire = self._wireList[n]
         assert wire != None
         return wire.isHigh()
         
     def isLowWN(self, n):
         if n in self.wireNames:
             wireIndex = self.wireNames[n]
-            return self.wireList[wireIndex].isLow()
+            return self._wireList[wireIndex].isLow()
 
-        wire = self.wireList[n]
+        wire = self._wireList[n]
         assert wire != None
         return wire.isLow()
 
@@ -391,12 +392,12 @@ class CircuitSimulator(object):
             nameStr = j[0]
             for k in j[1:]:
                 name = '%s%d'%(nameStr,i)
-                self.wireList[k].name = name
+                self._wireList[k].name = name
                 self.wireNames[name] = k
                 i += 1
 
     def getWiresState(self):
-        return [w.state for w in self.wireList]
+        return [w.state for w in self._wireList]
 
     def loadCircuit (self, filePath):
 
@@ -434,7 +435,7 @@ class CircuitSimulator(object):
         l = len(fetGateWireInds)
         assert l == numFets, 'Expected %d fetGateWireInds, got %d'%(numFets, l)
 
-        self.wireList = [None] * numWires
+        self._wireList = [None] * numWires
 
         i = 0
         wcfi = 0
@@ -468,13 +469,13 @@ class CircuitSimulator(object):
 
             if len(wireCtrlFets) == 0 and len(gates) == 0:
                 assert wireNames[i] == ''
-                self.wireList[i] = None
+                self._wireList[i] = None
             else:
-                self.wireList[i] = Wire(i, wireNames[i], controlFets, gates, wirePulled[i])
+                self._wireList[i] = Wire(i, wireNames[i], controlFets, gates, wirePulled[i])
                 self.wireNames[wireNames[i]] = i
             i += 1
 
-        self.transistorList = [None] * numFets
+        self._transistorList = [None] * numFets
         i = 0
         while i < numFets:
             s1 = fetSide1WireInds[i]
@@ -485,17 +486,17 @@ class CircuitSimulator(object):
                 assert s2 == noWire
                 assert gate == noWire
             else:
-                self.transistorList[i] = NmosFet(i, s1, s2, gate)
+                self._transistorList[i] = NmosFet(i, s1, s2, gate)
             i += 1
 
         assert 'VCC' in self.wireNames
         assert 'VSS' in self.wireNames
         self.vccWireIndex = self.wireNames['VCC']
         self.gndWireIndex = self.wireNames['VSS']
-        self.wireList[self.vccWireIndex].state = HIGH
-        self.wireList[self.gndWireIndex].state = GROUNDED
-        for transInd in self.wireList[self.vccWireIndex].gateInds:
-            self.transistorList[transInd].gateState = NmosFet.GATE_HIGH
+        self._wireList[self.vccWireIndex].state = HIGH
+        self._wireList[self.gndWireIndex].state = GROUNDED
+        for transInd in self._wireList[self.vccWireIndex].gateInds:
+            self._transistorList[transInd].gateState = NmosFet.GATE_HIGH
 
         self.lastWireGroupState = [-1] * numWires
 
@@ -506,7 +507,7 @@ class CircuitSimulator(object):
  
         rootObj = dict()
         
-        numWires = len(self.wireList)
+        numWires = len(self._wireList)
         nextCtrl = 0xFFFE
 
         # 'B' for unsigned integer, minimum of 1 byte
@@ -518,7 +519,7 @@ class CircuitSimulator(object):
         numNoneWires = 0
         wireNames = []
 
-        for i, wire in enumerate(self.wireList):
+        for i, wire in enumerate(self._wireList):
             if wire == None:
                 wireControlFets.append(0)
                 wireControlFets.append(nextCtrl)
@@ -543,12 +544,12 @@ class CircuitSimulator(object):
             wireNames.append(wire.name)
 
         noWire = 0xFFFD
-        numFets = len(self.transistorList)
+        numFets = len(self._transistorList)
         fetSide1WireInds = array('I', [noWire] * numFets)
         fetSide2WireInds = array('I', [noWire] * numFets)
         fetGateWireInds  = array('I', [noWire] * numFets)
 
-        for i, trans in enumerate(self.transistorList):
+        for i, trans in enumerate(self._transistorList):
             if trans == None:
                 continue
             fetSide1WireInds[i] = trans.c1
@@ -592,11 +593,11 @@ class CircuitSimulator(object):
                groupWireIndex == self.vccWireIndex:
                 # TODO: remove gnd and vcc from group?
                 continue
-            simWire = self.wireList[groupWireIndex]
+            simWire = self._wireList[groupWireIndex]
             simWire.state = newValue
             for transIndex in simWire.gateInds:
 
-                t = self.transistorList[transIndex]
+                t = self._transistorList[transIndex]
 
                 if newHigh == True and t.gateState == NmosFet.GATE_LOW:
                     self._turnTransistorOn(t)
@@ -649,7 +650,7 @@ class CircuitSimulator(object):
         l = list(group)
         sawFl = False
         sawFh = False
-        value = self.wireList[l[0]].state
+        value = self._wireList[l[0]].state
 
         for wireIndex in group:
             if wireIndex == self.gndWireIndex:
@@ -659,7 +660,7 @@ class CircuitSimulator(object):
                     return GROUNDED
                 else:
                     return HIGH
-            wire = self.wireList[wireIndex]
+            wire = self._wireList[wireIndex]
             if wire.pulled == PULLED_HIGH:
                 value = PULLED_HIGH
             elif wire.pulled == PULLED_LOW:
@@ -690,7 +691,7 @@ class CircuitSimulator(object):
     def _addWireToGroup(self, wireIndex, group):
         self.numAddWireToGroup += 1
         group.add(wireIndex)
-        wire = self.wireList[wireIndex]
+        wire = self._wireList[wireIndex]
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
 
@@ -705,7 +706,7 @@ class CircuitSimulator(object):
         # 
         self.numAddWireTransistor += 1
         other = -1
-        trans = self.transistorList[t]
+        trans = self._transistorList[t]
         if trans.gateState == NmosFet.GATE_LOW:
             return
         if trans.side1WireIndex == wireIndex:
@@ -724,7 +725,7 @@ class CircuitSimulator(object):
         countFl = 0
         countFh = 0
         for i in group:
-            wire = self.wireList[i]
+            wire = self._wireList[i]
             num = len(wire.ctInds) + len(wire.gateInds)
             if wire.state == FLOATING_LOW:
                 countFl += num
