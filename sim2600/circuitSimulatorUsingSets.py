@@ -90,6 +90,16 @@ class CircuitSimulator(CircuitSimulatorBase):
 
 
     def getWireValue(self, group):
+        """
+        This function performs group resolution for a collection
+        of wires
+
+        if any wire in the group is ground, return grounded
+        if any wire in the group is vcc and it's not grounded, 
+        return high; else return grounded
+
+        
+        """
         # TODO PERF: why turn into a list?
         l = list(group)
         sawFl = False

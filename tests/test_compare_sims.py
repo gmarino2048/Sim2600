@@ -43,3 +43,13 @@ def test_compare_list_sets():
     
     compare_sims(s1, s2)
 
+def test_compare_list_mine():
+    """
+    Just compare our default simulator agaginst
+    itself
+    """
+    s1 = lambda x: sim2600Console.Sim2600Console(x, sim6502.Sim6502)
+    s2 = lambda x: sim2600Console.Sim2600Console(x, sim6502.MySim6502)
+    
+    compare_sims(s1, s2)
+

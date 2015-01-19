@@ -26,7 +26,9 @@ import params
 
 from circuitSimulatorUsingLists import CircuitSimulator as CircuitSimulatorLists
 from circuitSimulatorUsingSets import CircuitSimulator as CircuitSimulatorSets
+import pyximport; pyximport.install()
 
+from mycircuitsimulator import CircuitSimulator as MyCircuitSimulator
 
 class Sim6502(CircuitSimulatorLists):
     def __init__(self):
@@ -118,6 +120,94 @@ class Sim6502(CircuitSimulatorLists):
 class Sim6502Sets(CircuitSimulatorSets):
     def __init__(self):
         CircuitSimulatorSets.__init__(self)
+
+        self.loadCircuit(params.chip6502File)
+
+        # No need to update the names based on params.mos6502WireInit.
+        # The names have already been saved in the net_6502.pkl file.
+        # This is provided as an example of how to update a chip's 
+        # wires with your own string names.
+        #self.updateWireNames(params.mos6502WireInit)
+
+        # Store indices into the wireList.  This saves having
+        # to look up the wires by their string name from the
+        # wireNames dict.
+        self.addressBusPads = []
+        for padName in params.cpuAddressBusPadNames:
+            wireIndex = self.getWireIndex(padName)
+            self.addressBusPads.append(wireIndex)
+
+        self.dataBusPads = []
+        for padName in params.dataBusPadNames:
+            wireIndex = self.getWireIndex(padName)
+            self.dataBusPads.append(wireIndex)
+
+        self.padIndRW      = self.getWireIndex('R/W')
+        self.padIndCLK0    = self.getWireIndex('CLK0')
+        self.padIndRDY     = self.getWireIndex('RDY')
+        self.padIndCLK1Out = self.getWireIndex('CLK1OUT')
+        self.padIndSYNC    = self.getWireIndex('SYNC')
+        self.padReset      = self.getWireIndex('RES')
+
+    def getAddressBusValue(self):
+        addr = 0
+        shift = 0
+        for wireIndex in self.addressBusPads:
+            if self.isHigh(wireIndex):
+                addr |= (1 << shift)
+            shift += 1
+        return addr
+        
+    def getDataBusValue(self):
+        data = 0
+        shift = 0
+        for wireIndex in self.dataBusPads:
+            if self.isHigh(wireIndex):
+                data |= 1 << shift
+            shift += 1
+        return data
+
+    def setDataBusValue(self, value):
+        shift = 0
+        for wireIndex in self.dataBusPads:
+            if (value & (1 << shift)) != 0:
+                self.setHigh(wireIndex)
+            else:
+                self.setLow(wireIndex)
+            shift += 1
+
+    def getStateStr1(self):
+        return str('6502 CLK %d RES %d RDY %d  ADDR 0x%4.4X  DB 0x%2.2X'%
+              (self.isHighWN('CLK0'), 
+               self.isHighWN('RES'), self.isHighWN('RDY'), 
+               self.getAddressBusValue(), self.getDataBusValue()))
+
+    def resetChip(self):
+        print('Starting 6502 reset sequence: pulling RES low')
+        self.recalcAllWires()
+        self.setLowWN('RES')
+        self.setHighWN('IRQ')  # no interrupt
+        self.setHighWN('NMI')  # no interrupt
+        self.setHighWN('RDY')  # let the chip run.  Will connect to TIA with pullup
+        self.recalcWireNameList(['IRQ','NMI','RES','RDY'])
+        for i in xrange(4):
+            if i % 2:
+                self.setLowWN('CLK0')
+            else:
+                self.setHighWN('CLK0')
+            self.recalcNamedWire('CLK0')
+
+        print('Setting 6502 RES high')
+        self.setHighWN('RES')
+        self.recalcNamedWire('RES')
+
+        print('Finished 6502 reset sequence')
+
+
+
+class MySim6502(MyCircuitSimulator):
+    def __init__(self):
+        MyCircuitSimulator.__init__(self)
 
         self.loadCircuit(params.chip6502File)
 
