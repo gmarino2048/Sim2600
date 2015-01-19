@@ -298,6 +298,9 @@ class CircuitSimulatorBase:
                 self.wireNames[name] = k
                 i += 1
 
+    def getWiresState(self):
+        return [w.state for w in self.wireList]
+
     def loadCircuit (self, filePath):
 
         if not os.path.exists(filePath):
