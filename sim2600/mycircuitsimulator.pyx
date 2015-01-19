@@ -20,6 +20,7 @@
 
 import os, pickle, traceback
 from array import array
+import numpy as np
 
 cpdef enum WireState:
     PULLED_HIGH  = 1 << 0
@@ -186,9 +187,9 @@ class CircuitSimulatorBase:
         if self.recalcArray == None:
             self.recalcCap = len(self.transistorList)
             # Using lists [] for these is faster than using array('B'/'L', ...)
-            self.recalcArray = [False] * self.recalcCap
+            self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
             self.recalcOrderStack = []
-            self.newRecalcArray = [0] * self.recalcCap
+            self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
             self.newRecalcOrderStack = []
         
     def recalcWireList(self, nwireList):
@@ -286,6 +287,7 @@ class CircuitSimulatorBase:
 
     def turnTransistorOff(self, t):
         raise RuntimeError('This method should be overridden by a derived class')
+                self.recalcArray = np.zeros_like(self.recalcArray) # [False] * len(self.recalcArray)
 
     def floatWire(self, n):
         wire = self.wireList[n]
