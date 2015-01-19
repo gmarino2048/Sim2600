@@ -181,22 +181,19 @@ class CircuitSimulator(object):
         self.recalcWireList (wireInds)
         
     def recalcWireList(self, nwireList):
-        calculator = WireCalculator(self._wireList, self._transistorList, 
-                                    self.gndWireIndex, self.vccWireIndex, 
-                                copy_objs=True)
+        self.calculator.setState(self._wireList, self._transistorList)
+
+        self.calculator.recalcWireList(nwireList, self.halfClkCount < 20)
         
-
-        calculator.recalcWireList(nwireList, self.halfClkCount < 20)
-
         for i in range(len(self._wireList)):
-            self._wireList[i].state = calculator._wireList[i].state
-            self._wireList[i].pulled = calculator._wireList[i].pulled
+            self._wireList[i].state = self.calculator._wireList[i].state
+            self._wireList[i].pulled = self.calculator._wireList[i].pulled
 
         for i in range(len(self._transistorList)):
-            self._transistorList[i].gateState = calculator._transistorList[i].gateState
+            self._transistorList[i].gateState = self.calculator._transistorList[i].gateState
+
     def recalcWire(self, wireIndex):
         self.recalcWireList([wireIndex])
-
 
     def floatWire(self, n):
         wire = self._wireList[n]
@@ -417,6 +414,11 @@ class CircuitSimulator(object):
 
         self.lastWireGroupState = [-1] * numWires
 
+        # create the calculator
+        self.calculator  = WireCalculator(self._wireList, 
+                                          self._transistorList, 
+                                          self.gndWireIndex,
+                                          self.vccWireIndex)
         return rootObj
 
 
@@ -495,16 +497,11 @@ class CircuitSimulator(object):
 
 class WireCalculator(object):
     def __init__(self, wireList, transistorList, gndWireIndex,
-                 vccWireIndex, copy_objs=False):
+                 vccWireIndex):
         self.name = ''
-        if copy_objs:
-            self._wireList = copy.deepcopy(wireList)
-            self._transistorList = copy.deepcopy(transistorList)
+        self._wireList = copy.deepcopy(wireList)
+        self._transistorList = copy.deepcopy(transistorList)
             
-        else:
-            self._wireList =  wireList
-            self._transistorList = transistorList
-
         self.recalcArray = None
 
         self.gndWireIndex = gndWireIndex
@@ -521,6 +518,15 @@ class WireCalculator(object):
 
         self._prepForRecalc()
 
+    def setState(self, wireList, transistorList):
+
+        for i in range(len(self._wireList)):
+            self._wireList[i].state = wireList[i].state
+            self._wireList[i].pulled = wireList[i].pulled
+
+        for i in range(len(self._transistorList)):
+            self._transistorList[i].gateState = transistorList[i].gateState
+
 
     def _prepForRecalc(self):
         if self.recalcArray == None:
@@ -532,6 +538,7 @@ class WireCalculator(object):
             self.newRecalcOrderStack = []
         
     def recalcWireList(self, nwireList, sanityCheck=False):
+
         self._prepForRecalc()
 
         for wireIndex in nwireList:
