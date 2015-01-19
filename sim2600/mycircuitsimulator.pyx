@@ -187,12 +187,9 @@ class CircuitSimulatorBase:
             self.recalcCap = len(self.transistorList)
             # Using lists [] for these is faster than using array('B'/'L', ...)
             self.recalcArray = [False] * self.recalcCap
-            self.recalcOrder = [0] * self.recalcCap
-            self.newRecalcOrder = [0] * self.recalcCap
+            self.recalcOrderStack = []
             self.newRecalcArray = [0] * self.recalcCap
-
-        self.newLastRecalcOrder = 0
-        self.lastRecalcOrder = 0
+            self.newRecalcOrderStack = []
         
     def recalcWireList(self, nwireList):
         self.prepForRecalc()
@@ -202,18 +199,16 @@ class CircuitSimulatorBase:
             # marks the last index into this list that we should recalculate.
             # recalcArray has entries for all wires and is used to mark
             # which wires need to be recalcualted.
-            self.recalcOrder[self.lastRecalcOrder] = wireIndex
+            self.recalcOrderStack.append(wireIndex)
             self.recalcArray[wireIndex] = True
-            self.lastRecalcOrder += 1
             
         self.doRecalcIterations()
 
     def recalcWire(self, wireIndex):
         self.prepForRecalc()
 
-        self.recalcOrder[self.lastRecalcOrder] = wireIndex
+        self.recalcOrderStack.append(wireIndex)
         self.recalcArray[wireIndex] = True
-        self.lastRecalcOrder += 1
 
         self.doRecalcIterations()
 
@@ -227,29 +222,25 @@ class CircuitSimulatorBase:
         while step < stepLimit:
             #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
             #        str(self.recalcOrder[:self.lastRecalcOrder])))
-            if self.lastRecalcOrder == 0:
+            if len(self.recalcOrderStack) == 0:
                 break;
 
-            i = 0
-            while i < self.lastRecalcOrder:
-                wireIndex = self.recalcOrder[i]
+
+            for wireIndex in self.recalcOrderStack:
                 self.newRecalcArray[wireIndex] = 0
 
                 self.doWireRecalc(wireIndex)
 
                 self.recalcArray[wireIndex] = False
                 self.numWiresRecalculated += 1
-                i += 1
+
 
             tmp = self.recalcArray
             self.recalcArray = self.newRecalcArray
             self.newRecalcArray = tmp
-            tmp = self.recalcOrder
-            self.recalcOrder = self.newRecalcOrder
-            self.newRecalcOrder = tmp
 
-            self.lastRecalcOrder = int(self.newLastRecalcOrder)
-            self.newLastRecalcOrder = 0
+            self.recalcOrderStack = self.newRecalcOrderStack
+            self.newRecalcOrderStack = []
 
             step += 1
 
@@ -626,14 +617,12 @@ class CircuitSimulator(CircuitSimulatorBase):
         wireInd = t.side1WireIndex
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrder[self.newLastRecalcOrder] = wireInd
-            self.newLastRecalcOrder += 1
+            self.newRecalcOrderStack.append(wireInd)
 
         wireInd = t.side2WireIndex
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrder[self.newLastRecalcOrder] = wireInd
-            self.newLastRecalcOrder += 1
+            self.newRecalcOrderStack.append(wireInd)
 
     def turnTransistorOff(self, t):
         t.gateState = NmosFet.GATE_LOW
@@ -646,15 +635,12 @@ class CircuitSimulator(CircuitSimulatorBase):
         wireInd = c1Wire
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrder[self.newLastRecalcOrder] = wireInd
-            self.newLastRecalcOrder += 1
+            self.newRecalcOrderStack.append(wireInd)
 
         wireInd = c2Wire
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrder[self.newLastRecalcOrder] = wireInd
-            self.newLastRecalcOrder += 1
-
+            self.newRecalcOrderStack.append(wireInd)
 
     def getWireValue(self, group):
         """
