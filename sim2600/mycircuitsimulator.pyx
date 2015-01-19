@@ -203,7 +203,7 @@ class CircuitSimulator(object):
             self.recalcOrderStack.append(wireIndex)
             self.recalcArray[wireIndex] = True
             
-        self.doRecalcIterations()
+        self._doRecalcIterations()
 
     def recalcWire(self, wireIndex):
         self.prepForRecalc()
@@ -211,9 +211,9 @@ class CircuitSimulator(object):
         self.recalcOrderStack.append(wireIndex)
         self.recalcArray[wireIndex] = True
 
-        self.doRecalcIterations()
+        self._doRecalcIterations()
 
-    def doRecalcIterations(self):
+    def _doRecalcIterations(self):
         # Simulation is not allowed to try more than 'stepLimit' 
         # iterations.  If it doesn't converge by then, raise an 
         # exception.
@@ -278,6 +278,7 @@ class CircuitSimulator(object):
                         break
             if needNewArray:
                 self.recalcArray = np.zeros_like(self.recalcArray) # [False] * len(self.recalcArray)
+
 
     def floatWire(self, n):
         wire = self.wireList[n]
@@ -500,6 +501,7 @@ class CircuitSimulator(object):
 
         return rootObj
 
+
     def writeCktFile(self, filePath):
  
         rootObj = dict()
@@ -571,14 +573,17 @@ class CircuitSimulator(object):
         pickle.dump(rootObj, of)
         of.close()
 
+
     def doWireRecalc(self, wireIndex):
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
 
         group = set()
-        self.addWireToGroup(wireIndex, group)
+        # addWireToGroup recursively adds this wire and all wires
+        # of connected transistors
+        self._addWireToGroup(wireIndex, group)
         
-        newValue = self.getWireValue(group)
+        newValue = self._getWireValue(group)
         newHigh = newValue == HIGH or newValue == PULLED_HIGH or \
                   newValue == FLOATING_HIGH
 
@@ -594,11 +599,11 @@ class CircuitSimulator(object):
                 t = self.transistorList[transIndex]
 
                 if newHigh == True and t.gateState == NmosFet.GATE_LOW:
-                    self.turnTransistorOn(t)
+                    self._turnTransistorOn(t)
                 if newHigh == False and t.gateState == NmosFet.GATE_HIGH:
-                    self.turnTransistorOff(t)
+                    self._turnTransistorOff(t)
 
-    def turnTransistorOn(self, t):
+    def _turnTransistorOn(self, t):
         t.gateState = NmosFet.GATE_HIGH
 
         wireInd = t.side1WireIndex
@@ -611,7 +616,7 @@ class CircuitSimulator(object):
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.append(wireInd)
 
-    def turnTransistorOff(self, t):
+    def _turnTransistorOff(self, t):
         t.gateState = NmosFet.GATE_LOW
 
         c1Wire = t.side1WireIndex
@@ -629,7 +634,7 @@ class CircuitSimulator(object):
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.append(wireInd)
 
-    def getWireValue(self, group):
+    def _getWireValue(self, group):
         """
         This function performs group resolution for a collection
         of wires
@@ -675,23 +680,29 @@ class CircuitSimulator(object):
             # each one holds, and set the result hi or low based
             # on which region has the most components.
             if sawFl and sawFh:
-                sizes = self.countWireSizes(group)
+                sizes = self._countWireSizes(group)
                 if sizes[1] < sizes[0]:
                     value = FLOATING_LOW
                 else:
                     value = FLOATING_HIGH
         return value
 
-    def addWireToGroup(self, wireIndex, group):
+    def _addWireToGroup(self, wireIndex, group):
         self.numAddWireToGroup += 1
         group.add(wireIndex)
         wire = self.wireList[wireIndex]
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
-        for t in wire.ctInds:
-            self.addWireTransistor (wireIndex, t, group)
 
-    def addWireTransistor(self, wireIndex, t, group):
+        # for each transistor which switch other wires into connection
+        # with this wire
+        for t in wire.ctInds: 
+            self._addWireTransistor (wireIndex, t, group)
+
+    def _addWireTransistor(self, wireIndex, t, group):
+        # for this wire and this transistor, check if the transistor
+        # is on. If it is, add the connected wires recursively
+        # 
         self.numAddWireTransistor += 1
         other = -1
         trans = self.transistorList[t]
@@ -706,10 +717,10 @@ class CircuitSimulator(object):
             return
         if other in group:
             return
-        self.addWireToGroup(other, group)
+        self._addWireToGroup(other, group)
 
 
-    def countWireSizes(self, group):
+    def _countWireSizes(self, group):
         countFl = 0
         countFh = 0
         for i in group:
