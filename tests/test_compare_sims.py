@@ -3,7 +3,7 @@ from nose.tools import *
 
 import sim2600
 from sim2600 import sim2600Console
-from sim2600 import params
+from sim2600 import params, sim6502
 import sim2600.sim6502
 
 def compare_sims(s1func, s2func, ITERS=100):
@@ -31,4 +31,15 @@ def test_compare_simple_simple():
     s1 = lambda x: sim2600Console.Sim2600Console(x)
     
     compare_sims(s1, s1)
+
+
+def test_compare_list_sets():
+    """
+    Just compare our default simulator agaginst
+    itself
+    """
+    s1 = lambda x: sim2600Console.Sim2600Console(x, sim6502.Sim6502)
+    s2 = lambda x: sim2600Console.Sim2600Console(x, sim6502.Sim6502Sets)
+    
+    compare_sims(s1, s2)
 
