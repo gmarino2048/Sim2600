@@ -491,7 +491,7 @@ class WireCalculator:
                  vccWireIndex):
         self.name = ""
         self._wireList = wireList
-        self._transistorList = transistorList
+        #self._transistorList = transistorList
         self._wireState = wireState
         self._wirePulled = wirePulled
         self._transistorState = transistorState
@@ -510,6 +510,13 @@ class WireCalculator:
         # If not None, call this to add a line to some log
         self.callback_addLogStr = None   # callback_addLogStr ('some text')
 
+        self.recalcCap = len(self._transistorState)
+        # Using lists [] for these is faster than using array('B'/'L', ...)
+        self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
+        self.recalcOrderStack = []
+        self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
+        self.newRecalcOrderStack = []
+
         self._prepForRecalc()
 
 
@@ -522,13 +529,6 @@ class WireCalculator:
             self._transistorWires[ti, TW_S2] = t.side2WireIndex
 
     def _prepForRecalc(self):
-        if self.recalcArray is None:
-            self.recalcCap = len(self._transistorState)
-            # Using lists [] for these is faster than using array('B'/'L', ...)
-            self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
-            self.recalcOrderStack = []
-            self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
-            self.newRecalcOrderStack = []
         self.recalcOrderStack = []
         self.newRecalcOrderStack = []
         
