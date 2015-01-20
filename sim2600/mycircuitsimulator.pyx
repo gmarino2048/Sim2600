@@ -536,7 +536,10 @@ class WireCalculator(object):
             self.recalcOrderStack = []
             self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
             self.newRecalcOrderStack = []
+        self.recalcOrderStack = []
+        self.newRecalcOrderStack = []
         
+
     def recalcWireList(self, nwireList, halfClkCount):
 
         self._prepForRecalc()
@@ -563,7 +566,7 @@ class WireCalculator(object):
         while step < stepLimit:
             #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
             #        str(self.recalcOrder[:self.lastRecalcOrder])))
-            print "doing recalc iterations, step=", step, "stack size=", len(self.recalcOrderStack)
+
             if len(self.recalcOrderStack) == 0:
                 break;
 
@@ -610,7 +613,6 @@ class WireCalculator(object):
             needNewArray = False
             for recalc in self.recalcArray:
                 if recalc != False:
-                    print "YIKES! RECALC IS", recalc
                     needNewArray = True
                     if step < stepLimit:
                         msg = 'ERROR: at halfclk %d, '%(halfClkCount) + \

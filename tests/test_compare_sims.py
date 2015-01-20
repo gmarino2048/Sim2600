@@ -65,5 +65,16 @@ def test_compare_list_mine_tia():
     s1 = lambda x: sim2600Console.Sim2600Console(x)
     s2 = lambda x: sim2600Console.Sim2600Console(x, simTIAfactory=simTIA.MySimTIA)
     
-    compare_sims(s1, s2, ITERS=2)
+    compare_sims(s1, s2, ITERS=40)
+
+def test_compare_both():
+    """
+    Just compare our default simulator agaginst
+    itself
+    """
+    s1 = lambda x: sim2600Console.Sim2600Console(x)
+    s2 = lambda x: sim2600Console.Sim2600Console(x, simTIAfactory=simTIA.MySimTIA, 
+                                                 sim6502factory=sim6502.MySim6502)
+    
+    compare_sims(s1, s2, ITERS=400)
 
