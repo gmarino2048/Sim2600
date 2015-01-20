@@ -25,14 +25,16 @@ import copy
 import sys
 
 cpdef enum WireState:
-    PULLED_HIGH  = 1 << 0
-    PULLED_LOW     = 1 << 1
-    GROUNDED       = 1 << 2
-    HIGH           = 1 << 3
-    FLOATING_HIGH  = 1 << 4
-    FLOATING_LOW   = 1 << 5
-    FLOATING       = 1 << 6
+    PULLED_HIGH  = 1 << 0 # 1 
+    PULLED_LOW     = 1 << 1 # 2
+    GROUNDED       = 1 << 2 # 4
+    HIGH           = 1 << 3 # 8
+    FLOATING_HIGH  = 1 << 4 # 16
+    FLOATING_LOW   = 1 << 5 # 32
+    FLOATING       = 1 << 6 # 64
 
+cdef int ANY_HIGH = (FLOATING_HIGH | HIGH | PULLED_HIGH)
+cdef int ANY_LOW  = (FLOATING_LOW | GROUNDED | PULLED_LOW)
 class Wire:
 
     def __init__(self, idIndex, name, controlTransIndices, transGateIndices, pulled):
