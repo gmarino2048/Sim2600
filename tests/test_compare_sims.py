@@ -14,18 +14,24 @@ def compare_sims(s1func, s2func, ITERS=100):
         s1 = s1func(rom)
         s2 = s2func(rom)
 
+
+        s1_init_state =  s1.sim6507.getWiresState() #  # getWireState()
+        s2_init_state =  s2.sim6507.getWiresState() #  # getWireState()
+
+        np.testing.assert_array_equal(s1_init_state, s2_init_state)
+
         for i in range(ITERS):
             s1.advanceOneHalfClock()
             s2.advanceOneHalfClock()
             s1_state =  s1.sim6507.getWiresState() #  # getWireState()
             s2_state =  s2.sim6507.getWiresState() #  # getWireState()
 
-            assert_equal(s1_state, s2_state)
+            np.testing.assert_array_equal(s1_state, s2_state)
 
-            s1_state =  s1.simTIA.getWiresState() #  # getWireState()
-            s2_state =  s2.simTIA.getWiresState() #  # getWireState()
+            s1_tia_state =  s1.simTIA.getWiresState() #  # getWireState()
+            s2_tia_state =  s2.simTIA.getWiresState() #  # getWireState()
 
-            assert_equal(s1_state, s2_state)
+            np.testing.assert_array_equal(s1_tia_state, s2_tia_state)
 
 def test_compare_simple_simple():
     """
