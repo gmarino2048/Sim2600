@@ -301,6 +301,12 @@ class CircuitSimulatorBase:
     def getWiresState(self):
         return [w.state for w in self.wireList]
 
+    def getPulledState(self):
+        return [w.pulled for w in self.wireList]
+
+    def getTransistorState(self):
+        return [t.gateState for g in self.transistorList]
+
     def loadCircuit (self, filePath):
 
         if not os.path.exists(filePath):
