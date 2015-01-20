@@ -40,7 +40,7 @@ class Wire:
         self.name = name
 
         # Transistors that switch other wires into connection with this wire
-        self.ctInds = controlTransIndices
+        self.ctInds = list(controlTransIndices)
 
         # Transistors whos gate is driven by this wire
         self.gateInds = list(transGateIndices) # FOR AN INSANE REASON WHEN THIS IS A SET IT FAILS
@@ -176,14 +176,14 @@ class CircuitSimulator(object):
         """ Not fast.  Meant only for setting initial conditions """
         wireInds = []
         for ind, wire in enumerate(self._wireList):
-            if wire != None:
+            if wire is not None:
                 wireInds.append(ind)
         self.recalcWireList (wireInds)
         
     def recalcWireList(self, nwireList):
         self.calculator.setState(self._wireList, self._transistorList)
 
-        self.calculator.recalcWireList(nwireList, self.halfClkCount < 20)
+        self.calculator.recalcWireList(nwireList, self.halfClkCount)
         
         for i in range(len(self._wireList)):
             self._wireList[i].state = self.calculator._wireList[i].state
@@ -219,7 +219,7 @@ class CircuitSimulator(object):
 
         assert type(n) == type(1), 'wire thing %s'%str(n)
         wire = self._wireList[n]
-        if wire != None:
+        if wire is not None:
             wire._setHigh()
         else:
             print 'ERROR - trying to set wire None high'
@@ -232,7 +232,7 @@ class CircuitSimulator(object):
 
         assert type(n) == type(1), 'wire thing %s'%str(n)
         wire = self._wireList[n]
-        if wire != None:
+        if wire is not None:
             wire.setLow()
         else:
             print 'ERROR - trying to set wire None low'
@@ -266,7 +266,7 @@ class CircuitSimulator(object):
         assert type(n) == type(1), 'ERROR: if arg to isHigh is not in ' + \
             'wireNames, it had better be an integer'
         wire = self._wireList[n]
-        assert wire != None
+        assert wire is not None
         return wire.isHigh()
         
     def isLowWN(self, n):
@@ -275,7 +275,7 @@ class CircuitSimulator(object):
             return self._wireList[wireIndex]._isLow()
 
         wire = self._wireList[n]
-        assert wire != None
+        assert wire is not None
         return wire.isLow()
 
     # TODO: rename to getNamedSignal (name, lowBitNum, highBitNum) ('DB',0,7) 
@@ -439,7 +439,7 @@ class CircuitSimulator(object):
         wireNames = []
 
         for i, wire in enumerate(self._wireList):
-            if wire == None:
+            if wire is None:
                 wireControlFets.append(0)
                 wireControlFets.append(nextCtrl)
                 wireGates.append(0)
@@ -469,7 +469,7 @@ class CircuitSimulator(object):
         fetGateWireInds  = array('I', [noWire] * numFets)
 
         for i, trans in enumerate(self._transistorList):
-            if trans == None:
+            if trans is None:
                 continue
             fetSide1WireInds[i] = trans.c1
             fetSide2WireInds[i] = trans.c2
@@ -529,7 +529,7 @@ class WireCalculator(object):
 
 
     def _prepForRecalc(self):
-        if self.recalcArray == None:
+        if self.recalcArray is None:
             self.recalcCap = len(self._transistorList)
             # Using lists [] for these is faster than using array('B'/'L', ...)
             self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
@@ -537,7 +537,7 @@ class WireCalculator(object):
             self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
             self.newRecalcOrderStack = []
         
-    def recalcWireList(self, nwireList, sanityCheck=False):
+    def recalcWireList(self, nwireList, halfClkCount):
 
         self._prepForRecalc()
 
@@ -549,11 +549,11 @@ class WireCalculator(object):
             self.recalcOrderStack.append(wireIndex)
             self.recalcArray[wireIndex] = True
             
-        self._doRecalcIterations(sanityCheck)
+        self._doRecalcIterations(halfClkCount)
 
 
 
-    def _doRecalcIterations(self, sanityCheck):
+    def _doRecalcIterations(self, halfClkCount):
         # Simulation is not allowed to try more than 'stepLimit' 
         # iterations.  If it doesn't converge by then, raise an 
         # exception.
@@ -563,6 +563,7 @@ class WireCalculator(object):
         while step < stepLimit:
             #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
             #        str(self.recalcOrder[:self.lastRecalcOrder])))
+            print "doing recalc iterations, step=", step, "stack size=", len(self.recalcOrderStack)
             if len(self.recalcOrderStack) == 0:
                 break;
 
@@ -597,7 +598,7 @@ class WireCalculator(object):
             # Don't raise an exception if this is the first attempt
             # to compute the state of a chip, but raise an exception if
             # the simulation doesn't converge any time other than that.
-            if self.halfClkCount > 0:
+            if halfClkCount > 0:
                 traceback.print_stack()
                 raise RuntimeError(msg)
 
@@ -605,13 +606,14 @@ class WireCalculator(object):
         # should be zero in preparation for the next half clock cycle.
         # FIXME WE SHOULD REALLY DO THIS
         # Only do this sanity check for the first clock cycles.
-        if sanityCheck: # self.halfClkCount < 20:
+        if halfClkCount < 20:
             needNewArray = False
             for recalc in self.recalcArray:
                 if recalc != False:
+                    print "YIKES! RECALC IS", recalc
                     needNewArray = True
                     if step < stepLimit:
-                        msg = 'ERROR: at halfclk %d, '%(self.halfClkCount) + \
+                        msg = 'ERROR: at halfclk %d, '%(halfClkCount) + \
                               'after %d iterations'%(step) + \
                               'an entry in recalcArray is not False at the ' + \
                               'end of an update'
@@ -820,4 +822,6 @@ class WireCalculator(object):
             if wire.state == FLOATING_HIGH:
                 countFh += num
         return [countFl, countFh]
+
+
 
