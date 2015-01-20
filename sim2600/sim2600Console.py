@@ -26,9 +26,10 @@ from simTIA import SimTIA
 from emuPIA import EmuPIA
 
 class Sim2600Console:
-    def __init__(self, romFilePath, sim6502factory=Sim6502):
+    def __init__(self, romFilePath, sim6502factory=Sim6502, 
+                 simTIAfactory= SimTIA):
         self.sim6507 = sim6502factory()
-        self.simTIA  = SimTIA()
+        self.simTIA  = simTIAfactory()
         self.emuPIA  = EmuPIA()
 
         self.rom = array('B', [0] * 4096)

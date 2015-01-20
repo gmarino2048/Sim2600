@@ -3,7 +3,7 @@ from nose.tools import *
 
 import sim2600
 from sim2600 import sim2600Console
-from sim2600 import params, sim6502
+from sim2600 import params, sim6502, simTIA
 import sim2600.sim6502
 
 def compare_sims(s1func, s2func, ITERS=100):
@@ -22,6 +22,10 @@ def compare_sims(s1func, s2func, ITERS=100):
 
             assert_equal(s1_state, s2_state)
 
+            s1_state =  s1.simTIA.getWiresState() #  # getWireState()
+            s2_state =  s2.simTIA.getWiresState() #  # getWireState()
+
+            assert_equal(s1_state, s2_state)
 
 def test_compare_simple_simple():
     """
@@ -52,4 +56,14 @@ def test_compare_list_mine():
     s2 = lambda x: sim2600Console.Sim2600Console(x, sim6502.MySim6502)
     
     compare_sims(s1, s2)
+
+def test_compare_list_mine_tia():
+    """
+    Just compare our default simulator agaginst
+    itself
+    """
+    s1 = lambda x: sim2600Console.Sim2600Console(x)
+    s2 = lambda x: sim2600Console.Sim2600Console(x, simTIAfactory=simTIA.MySimTIA)
+    
+    compare_sims(s1, s2, ITERS=2)
 
