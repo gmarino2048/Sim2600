@@ -478,14 +478,20 @@ class CircuitSimulator(object):
 
 
 
-class WireCalculator(object):
+cpdef enum TransistorIndexPos:
+    TW_GATE = 0
+    TW_S1 = 1
+    TW_S2 = 2
+
+class WireCalculator:
+
     def __init__(self, wireList, transistorList, 
                  wireState, wirePulled, transistorState, # all references
                  gndWireIndex,
                  vccWireIndex):
-        self.name = ''
-        self._wireList = copy.deepcopy(wireList)
-        self._transistorList = copy.deepcopy(transistorList)
+        self.name = ""
+        self._wireList = wireList
+        self._transistorList = transistorList
         self._wireState = wireState
         self._wirePulled = wirePulled
         self._transistorState = transistorState
@@ -506,9 +512,18 @@ class WireCalculator(object):
 
         self._prepForRecalc()
 
+
+        # create the transistor index array
+        self._transistorWires = np.zeros((len(transistorList), 
+                                          3), dtype=np.int32)
+        for ti, t in enumerate(transistorList):
+            self._transistorWires[ti, TW_GATE] = t.gateWireIndex
+            self._transistorWires[ti, TW_S1] = t.side1WireIndex
+            self._transistorWires[ti, TW_S2] = t.side2WireIndex
+
     def _prepForRecalc(self):
         if self.recalcArray is None:
-            self.recalcCap = len(self._transistorList)
+            self.recalcCap = len(self._transistorState)
             # Using lists [] for these is faster than using array('B'/'L', ...)
             self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
             self.recalcOrderStack = []
@@ -642,7 +657,6 @@ class WireCalculator(object):
             self._wireState[groupWireIndex] = newValue
             for transIndex in simWire.gateInds:
                 gateState = self._transistorState[transIndex]
-                t = self._transistorList[transIndex]
 
                 if newHigh == True and gateState == NmosFet.GATE_LOW:
                     self._turnTransistorOn(transIndex)
@@ -652,14 +666,12 @@ class WireCalculator(object):
     def _turnTransistorOn(self, tidx):
         self._transistorState[tidx] = NmosFet.GATE_HIGH
 
-        t = self._transistorList[tidx]
-
-        wireInd = t.side1WireIndex
+        wireInd = self._transistorWires[tidx, TW_S1]
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.append(wireInd)
 
-        wireInd = t.side2WireIndex
+        wireInd = self._transistorWires[tidx, TW_S2]
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.append(wireInd)
@@ -667,9 +679,9 @@ class WireCalculator(object):
     def _turnTransistorOff(self, tidx):
         self._transistorState[tidx] = NmosFet.GATE_LOW
 
-        t = self._transistorList[tidx]
-        c1Wire = t.side1WireIndex
-        c2Wire = t.side2WireIndex
+        #t = self._transistorList[tidx]
+        c1Wire = self._transistorWires[tidx, TW_S1]
+        c2Wire = self._transistorWires[tidx, TW_S2]
         self._floatWire(c1Wire)
         self._floatWire(c2Wire)
 
@@ -757,13 +769,16 @@ class WireCalculator(object):
         # 
         self.numAddWireTransistor += 1
         other = -1
-        trans = self._transistorList[t]
+        #trans = self._transistorList[t]
+        c1Wire = self._transistorWires[t, TW_S1]
+        c2Wire = self._transistorWires[t, TW_S2]
+
         if self._transistorState[t] == NmosFet.GATE_LOW:
             return
-        if trans.side1WireIndex == wireIndex:
-            other = trans.side2WireIndex
-        if trans.side2WireIndex == wireIndex:
-            other = trans.side1WireIndex
+        if c1Wire == wireIndex:
+            other = c2Wire
+        if c2Wire == wireIndex:
+            other = c1Wire
         if other == self.vccWireIndex or other == self.gndWireIndex:
             group.add(other)
             return
