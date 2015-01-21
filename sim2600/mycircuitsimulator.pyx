@@ -23,7 +23,8 @@ from array import array
 import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
-from libcpp.set cimport set
+from libcpp.set cimport set as stdset
+import cython
 
 import copy
 import sys
@@ -500,16 +501,18 @@ cdef class WireCalculator:
     cdef int numWiresRecalculated
     cdef object callback_addLogStr
     cdef int recalcCap
-    cdef object recalcOrderStack
+    cdef vector[int] recalcOrderStack
     cdef np.uint8_t[:] newRecalcArray
-    cdef object newRecalcOrderStack
+    cdef vector[int] newRecalcOrderStack
     cdef np.int32_t[:, :] _transistorWires
-    
+    cdef np.int32_t[:] _numWires
 
     def __init__(self, wireList, transistorList, 
                  wireState, wirePulled, transistorState, # all references
                  gndWireIndex,
                  vccWireIndex):
+
+        self._numWires = np.zeros(len(wireList), dtype=np.int32)
 
         self._wireList = wireList
         #self._transistorList = transistorList
@@ -534,10 +537,13 @@ cdef class WireCalculator:
         self.recalcCap = len(self._transistorState)
         # Using lists [] for these is faster than using array('B'/'L', ...)
         self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
-        self.recalcOrderStack = []
+        #self.recalcOrderStack = []
         self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
-        self.newRecalcOrderStack = []
+        #self.newRecalcOrderStack = []
 
+        # count the wires
+        for wi, w in enumerate(wireList):
+            self._numWires[wi] = len(w.ctInds) + len(w.gateInds)
         self._prepForRecalc()
 
 
@@ -548,10 +554,10 @@ cdef class WireCalculator:
             self._transistorWires[ti, TW_GATE] = t.gateWireIndex
             self._transistorWires[ti, TW_S1] = t.side1WireIndex
             self._transistorWires[ti, TW_S2] = t.side2WireIndex
-
-    def _prepForRecalc(self):
-        self.recalcOrderStack = []
-        self.newRecalcOrderStack = []
+            
+    cdef _prepForRecalc(self):
+        self.recalcOrderStack.clear() #  = []
+        self.newRecalcOrderStack.clear() #  = []
         
 
     def recalcWireList(self, nwireList, halfClkCount):
@@ -563,14 +569,14 @@ cdef class WireCalculator:
             # marks the last index into this list that we should recalculate.
             # recalcArray has entries for all wires and is used to mark
             # which wires need to be recalcualted.
-            self.recalcOrderStack.append(wireIndex)
+            self.recalcOrderStack.push_back(wireIndex)
             self.recalcArray[wireIndex] = True
             
         self._doRecalcIterations(halfClkCount)
 
 
 
-    def _doRecalcIterations(self, halfClkCount):
+    cdef _doRecalcIterations(self, halfClkCount):
         # Simulation is not allowed to try more than 'stepLimit' 
         # iterations.  If it doesn't converge by then, raise an 
         # exception.
@@ -599,7 +605,7 @@ cdef class WireCalculator:
             self.newRecalcArray = tmp
 
             self.recalcOrderStack = self.newRecalcOrderStack
-            self.newRecalcOrderStack = []
+            self.newRecalcOrderStack.clear()
 
             step += 1
 
@@ -639,27 +645,28 @@ cdef class WireCalculator:
                 print "OMG WE NEEDED A NEW ARRAY"
                 self.recalcArray = np.zeros_like(self.recalcArray) # [False] * len(self.recalcArray)
                 
-    def _floatWire(self, wireIndex):
-        i = wireIndex
-        wire = self._wireList[i]
+
+    cdef void _floatWire(self, int wireIndex):
+        cdef int i = wireIndex
+        cdef state = self._wireState[i]
 
         if self._wirePulled[i] == PULLED_HIGH:
             self._wireState[i] = PULLED_HIGH
         elif self._wirePulled[i] == PULLED_LOW:
             self._wireState[i] = PULLED_LOW
         else:
-            state = self._wireState[i]
             if state == GROUNDED or state == PULLED_LOW:
                 self._wireState[i] = FLOATING_LOW
             if state == HIGH or state == PULLED_HIGH:
                 self._wireState[i] = FLOATING_HIGH
 
 
-    def _doWireRecalc(self, wireIndex):
+    cdef _doWireRecalc(self, wireIndex):
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
-
+        
         group = set()
+
         # addWireToGroup recursively adds this wire and all wires
         # of connected transistors
         self._addWireToGroup(wireIndex, group)
@@ -684,20 +691,20 @@ cdef class WireCalculator:
                 if newHigh == False and gateState == NmosFet.GATE_HIGH:
                     self._turnTransistorOff(transIndex)
 
-    def _turnTransistorOn(self, tidx):
+    cdef _turnTransistorOn(self, tidx):
         self._transistorState[tidx] = NmosFet.GATE_HIGH
 
         wireInd = self._transistorWires[tidx, TW_S1]
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.append(wireInd)
+            self.newRecalcOrderStack.push_back(wireInd)
 
         wireInd = self._transistorWires[tidx, TW_S2]
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.append(wireInd)
+            self.newRecalcOrderStack.push_back(wireInd)
 
-    def _turnTransistorOff(self, tidx):
+    cdef _turnTransistorOff(self, tidx):
         self._transistorState[tidx] = NmosFet.GATE_LOW
 
         #t = self._transistorList[tidx]
@@ -709,14 +716,14 @@ cdef class WireCalculator:
         wireInd = c1Wire
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.append(wireInd)
+            self.newRecalcOrderStack.push_back(wireInd)
 
         wireInd = c2Wire
         if self.newRecalcArray[wireInd] == 0:
             self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.append(wireInd)
+            self.newRecalcOrderStack.push_back(wireInd)
 
-    def _getWireValue(self, group):
+    cdef _getWireValue(self, group):
         """
         This function performs group resolution for a collection
         of wires
@@ -771,7 +778,7 @@ cdef class WireCalculator:
                     value = FLOATING_HIGH
         return value
 
-    def _addWireToGroup(self, wireIndex, group):
+    cdef _addWireToGroup(self, wireIndex, group):
         self.numAddWireToGroup += 1
         group.add(wireIndex)
         wire = self._wireList[wireIndex]
@@ -784,15 +791,18 @@ cdef class WireCalculator:
         for t in wire.ctInds: 
             self._addWireTransistor (wireIndex, t, group)
 
-    def _addWireTransistor(self, wireIndex, t, group):
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
+    cdef _addWireTransistor(self, wireIndex, t, group):
         # for this wire and this transistor, check if the transistor
         # is on. If it is, add the connected wires recursively
         # 
         self.numAddWireTransistor += 1
-        other = -1
+        cdef int other = -1
         #trans = self._transistorList[t]
-        c1Wire = self._transistorWires[t, TW_S1]
-        c2Wire = self._transistorWires[t, TW_S2]
+        cdef c1Wire = self._transistorWires[t, TW_S1]
+        cdef c2Wire = self._transistorWires[t, TW_S2]
 
         if self._transistorState[t] == NmosFet.GATE_LOW:
             return
@@ -807,14 +817,18 @@ cdef class WireCalculator:
             return
         self._addWireToGroup(other, group)
 
-
-    def _countWireSizes(self, group):
-        countFl = 0
-        countFh = 0
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
+    cdef _countWireSizes(self, group):
+        cdef int countFl = 0
+        cdef int countFh = 0
+        cdef int i = 0
+        cdef int num = 0
+        cdef int wire_state = 0
         for i in group:
-            wire = self._wireList[i]
             wire_state = self._wireState[i]
-            num = len(wire.ctInds) + len(wire.gateInds)
+            num = self._numWires[i]
             if wire_state == FLOATING_LOW:
                 countFl += num
             if wire_state == FLOATING_HIGH:
