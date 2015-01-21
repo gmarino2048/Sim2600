@@ -66,6 +66,9 @@ class Wire:
         return rstr
 
 
+cdef int NMOS_GATE_LOW  = 0
+cdef int NMOS_GATE_HIGH = 1 << 0
+
 class NmosFet:
     GATE_LOW  = 0
     GATE_HIGH = 1 << 0
@@ -77,7 +80,7 @@ class NmosFet:
         self.side2WireIndex = side2WireIndex
         self.gateWireIndex  = gateWireIndex
 
-        self._gateState = NmosFet.GATE_LOW
+        self._gateState = NMOS_GATE_LOW
         self.index = idIndex
 
     def __repr__(self):
@@ -393,7 +396,7 @@ class CircuitSimulator(object):
         self._wireList[self.vccWireIndex]._state = HIGH
         self._wireList[self.gndWireIndex]._state = GROUNDED
         for transInd in self._wireList[self.vccWireIndex].gateInds:
-            self._transistorList[transInd]._gateState = NmosFet.GATE_HIGH
+            self._transistorList[transInd]._gateState = NMOS_GATE_HIGH
 
         self.lastWireGroupState = [-1] * numWires
 
@@ -646,9 +649,13 @@ cdef class WireCalculator:
                 self.recalcArray = np.zeros_like(self.recalcArray) # [False] * len(self.recalcArray)
                 
 
+
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
     cdef void _floatWire(self, int wireIndex):
         cdef int i = wireIndex
-        cdef state = self._wireState[i]
+        cdef int state = self._wireState[i]
 
         if self._wirePulled[i] == PULLED_HIGH:
             self._wireState[i] = PULLED_HIGH
@@ -660,8 +667,10 @@ cdef class WireCalculator:
             if state == HIGH or state == PULLED_HIGH:
                 self._wireState[i] = FLOATING_HIGH
 
-
-    cdef _doWireRecalc(self, wireIndex):
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
+    cdef void _doWireRecalc(self, int wireIndex):
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
         
@@ -686,13 +695,18 @@ cdef class WireCalculator:
             for transIndex in simWire.gateInds:
                 gateState = self._transistorState[transIndex]
 
-                if newHigh == True and gateState == NmosFet.GATE_LOW:
+                if newHigh == True and gateState == NMOS_GATE_LOW:
                     self._turnTransistorOn(transIndex)
-                if newHigh == False and gateState == NmosFet.GATE_HIGH:
+                if newHigh == False and gateState == NMOS_GATE_HIGH:
                     self._turnTransistorOff(transIndex)
 
-    cdef _turnTransistorOn(self, tidx):
-        self._transistorState[tidx] = NmosFet.GATE_HIGH
+
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
+    cdef void _turnTransistorOn(self, int tidx):
+        cdef int wireInd
+        self._transistorState[tidx] = NMOS_GATE_HIGH
 
         wireInd = self._transistorWires[tidx, TW_S1]
         if self.newRecalcArray[wireInd] == 0:
@@ -704,12 +718,16 @@ cdef class WireCalculator:
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.push_back(wireInd)
 
-    cdef _turnTransistorOff(self, tidx):
-        self._transistorState[tidx] = NmosFet.GATE_LOW
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
+    cdef void _turnTransistorOff(self, int tidx):
+        self._transistorState[tidx] = NMOS_GATE_LOW
+        cdef int wireInd
 
         #t = self._transistorList[tidx]
-        c1Wire = self._transistorWires[tidx, TW_S1]
-        c2Wire = self._transistorWires[tidx, TW_S2]
+        cdef int c1Wire = self._transistorWires[tidx, TW_S1]
+        cdef int c2Wire = self._transistorWires[tidx, TW_S2]
         self._floatWire(c1Wire)
         self._floatWire(c2Wire)
 
@@ -723,7 +741,10 @@ cdef class WireCalculator:
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.push_back(wireInd)
 
-    cdef _getWireValue(self, group):
+    @cython.boundscheck(False)
+    @cython.nonecheck(False)
+    @cython.initializedcheck(False)
+    cdef int _getWireValue(self, group):
         """
         This function performs group resolution for a collection
         of wires
@@ -794,17 +815,17 @@ cdef class WireCalculator:
     @cython.boundscheck(False)
     @cython.nonecheck(False)
     @cython.initializedcheck(False)
-    cdef _addWireTransistor(self, wireIndex, t, group):
+    cdef _addWireTransistor(self, int wireIndex, int t, group):
         # for this wire and this transistor, check if the transistor
         # is on. If it is, add the connected wires recursively
         # 
         self.numAddWireTransistor += 1
         cdef int other = -1
         #trans = self._transistorList[t]
-        cdef c1Wire = self._transistorWires[t, TW_S1]
-        cdef c2Wire = self._transistorWires[t, TW_S2]
+        cdef int c1Wire = self._transistorWires[t, TW_S1]
+        cdef int c2Wire = self._transistorWires[t, TW_S2]
 
-        if self._transistorState[t] == NmosFet.GATE_LOW:
+        if self._transistorState[t] == NMOS_GATE_LOW:
             return
         if c1Wire == wireIndex:
             other = c2Wire
