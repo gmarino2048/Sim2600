@@ -21,6 +21,10 @@
 import os, pickle, traceback
 from array import array
 import numpy as np
+cimport numpy as np
+from libcpp.vector cimport vector
+from libcpp.set cimport set
+
 import copy
 import sys
 
@@ -478,18 +482,35 @@ class CircuitSimulator(object):
 
 
 
-cpdef enum TransistorIndexPos:
-    TW_GATE = 0
-    TW_S1 = 1
-    TW_S2 = 2
+#cpdef enum TransistorIndexPos:
+cdef int    TW_GATE = 0
+cdef int    TW_S1 = 1
+cdef int    TW_S2 = 2
 
-class WireCalculator:
+cdef class WireCalculator:
+    cdef object _wireList
+    cdef np.uint8_t[:] _wireState
+    cdef np.uint8_t[:] _wirePulled
+    cdef np.uint8_t[:] _transistorState
+    cdef np.uint8_t[:] recalcArray
+    cdef int gndWireIndex
+    cdef int vccWireIndex
+    cdef int numAddWireToGroup
+    cdef int numAddWireTransistor
+    cdef int numWiresRecalculated
+    cdef object callback_addLogStr
+    cdef int recalcCap
+    cdef object recalcOrderStack
+    cdef np.uint8_t[:] newRecalcArray
+    cdef object newRecalcOrderStack
+    cdef np.int32_t[:, :] _transistorWires
+    
 
     def __init__(self, wireList, transistorList, 
                  wireState, wirePulled, transistorState, # all references
                  gndWireIndex,
                  vccWireIndex):
-        self.name = ""
+
         self._wireList = wireList
         #self._transistorList = transistorList
         self._wireState = wireState
@@ -587,8 +608,8 @@ class WireCalculator:
         # a reasonable state so that when input and clock pulses are
         # applied, the simulation will converge.
         if step >= stepLimit:
-            msg = 'ERROR: Sim "%s" did not converge after %d iterations'% \
-                  (self.name, stepLimit)
+            msg = 'ERROR: Sim  did not converge after %d iterations'% \
+                  ( stepLimit)
             if self.callback_addLogStr:
                 self.callback_addLogStr(msg)
             # Don't raise an exception if this is the first attempt
