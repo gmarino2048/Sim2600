@@ -17,6 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+#cython: language_level=2, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, overflowcheck=False
 
 import os, pickle, traceback
 from array import array
@@ -25,6 +26,7 @@ cimport numpy as np
 from libcpp.vector cimport vector
 from libcpp.set cimport set as stdset
 import cython
+from cython.operator cimport dereference as deref
 
 import copy
 import sys
@@ -509,6 +511,9 @@ cdef class WireCalculator:
     cdef vector[int] newRecalcOrderStack
     cdef np.int32_t[:, :] _transistorWires
     cdef np.int32_t[:] _numWires
+    # this is a hack because WHO knows how to do this ? NOT ME
+    cdef np.int32_t[:, :] _ctInds
+    cdef np.int32_t[:, :] _gateInds
 
     def __init__(self, wireList, transistorList, 
                  wireState, wirePulled, transistorState, # all references
@@ -540,13 +545,24 @@ cdef class WireCalculator:
         self.recalcCap = len(self._transistorState)
         # Using lists [] for these is faster than using array('B'/'L', ...)
         self.recalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [False] * self.recalcCap
-        #self.recalcOrderStack = []
+        self.recalcOrderStack.reserve(4000)
         self.newRecalcArray = np.zeros(self.recalcCap, dtype=np.uint8) # [0] * self.recalcCap
-        #self.newRecalcOrderStack = []
+        self.newRecalcOrderStack.reserve(4000)
+
+        self._ctInds = np.zeros((len(wireList), 4000), dtype=np.int32)
+        self._gateInds = np.zeros((len(wireList), 4000), dtype=np.int32)
 
         # count the wires
         for wi, w in enumerate(wireList):
             self._numWires[wi] = len(w.ctInds) + len(w.gateInds)
+
+            self._ctInds[wi, 0] = len(w.ctInds)
+            for i, cti in enumerate(w.ctInds):
+                self._ctInds[wi, i+1] = cti
+
+            self._gateInds[wi, 0] = len(w.gateInds)
+            for i, gi in enumerate(w.gateInds):
+                self._gateInds[wi, i+1] = gi
         self._prepForRecalc()
 
 
@@ -578,13 +594,12 @@ cdef class WireCalculator:
         self._doRecalcIterations(halfClkCount)
 
 
-
-    cdef _doRecalcIterations(self, halfClkCount):
+    cdef void _doRecalcIterations(self, int halfClkCount):
         # Simulation is not allowed to try more than 'stepLimit' 
         # iterations.  If it doesn't converge by then, raise an 
         # exception.
-        step = 0
-        stepLimit = 400
+        cdef int step = 0
+        cdef int stepLimit = 400
         
         while step < stepLimit:
             #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
@@ -650,9 +665,7 @@ cdef class WireCalculator:
                 
 
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
+
     cdef void _floatWire(self, int wireIndex):
         cdef int i = wireIndex
         cdef int state = self._wireState[i]
@@ -667,14 +680,16 @@ cdef class WireCalculator:
             if state == HIGH or state == PULLED_HIGH:
                 self._wireState[i] = FLOATING_HIGH
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
+
     cdef void _doWireRecalc(self, int wireIndex):
+        cdef int transIndex
+        cdef int newValue, newHigh, gateState
+        cdef int groupWireIndex, gate_inds_cnt, ti
+
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
         
-        group = set()
+        cdef stdset[int] group #  = set()
 
         # addWireToGroup recursively adds this wire and all wires
         # of connected transistors
@@ -689,10 +704,12 @@ cdef class WireCalculator:
                groupWireIndex == self.vccWireIndex:
                 # TODO: remove gnd and vcc from group?
                 continue
-            simWire = self._wireList[groupWireIndex]
+            #simWire = self._wireList[groupWireIndex]
             #simWire.state = newValue
             self._wireState[groupWireIndex] = newValue
-            for transIndex in simWire.gateInds:
+            gate_inds_cnt = self._gateInds[groupWireIndex, 0]
+            for ti in range(gate_inds_cnt): # in simWire.gateInds:
+                transIndex = self._gateInds[groupWireIndex, ti+1]
                 gateState = self._transistorState[transIndex]
 
                 if newHigh == True and gateState == NMOS_GATE_LOW:
@@ -701,9 +718,7 @@ cdef class WireCalculator:
                     self._turnTransistorOff(transIndex)
 
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
+
     cdef void _turnTransistorOn(self, int tidx):
         cdef int wireInd
         self._transistorState[tidx] = NMOS_GATE_HIGH
@@ -718,9 +733,7 @@ cdef class WireCalculator:
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.push_back(wireInd)
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
+
     cdef void _turnTransistorOff(self, int tidx):
         self._transistorState[tidx] = NMOS_GATE_LOW
         cdef int wireInd
@@ -741,10 +754,7 @@ cdef class WireCalculator:
             self.newRecalcArray[wireInd] = 1
             self.newRecalcOrderStack.push_back(wireInd)
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
-    cdef int _getWireValue(self, group):
+    cdef int _getWireValue(self, stdset[int] & group):
         """
         This function performs group resolution for a collection
         of wires
@@ -756,20 +766,21 @@ cdef class WireCalculator:
         
         """
         # TODO PERF: why turn into a list?
-        l = list(group)
-        sawFl = False
-        sawFh = False
-        value = self._wireState[l[0]]
-
+        #l = list(set(group))
+        cdef int sawFl = False
+        cdef int sawFh = False
+        cdef int firstval = deref(group.begin())
+        cdef int value = self._wireState[firstval] # l[0]]
+        cdef int wire_pulled, wire_state
         for wireIndex in group:
             if wireIndex == self.gndWireIndex:
                 return GROUNDED
             if wireIndex == self.vccWireIndex:
-                if self.gndWireIndex in group:
+                if group.find(self.gndWireIndex) != group.end() : #  in group:
                     return GROUNDED
                 else:
                     return HIGH
-
+                
             wire_pulled = self._wirePulled[wireIndex]
             wire_state = self._wireState[wireIndex]
             if wire_pulled == PULLED_HIGH:
@@ -792,30 +803,32 @@ cdef class WireCalculator:
             # each one holds, and set the result hi or low based
             # on which region has the most components.
             if sawFl and sawFh:
-                sizes = self._countWireSizes(group)
-                if sizes[1] < sizes[0]:
-                    value = FLOATING_LOW
-                else:
-                    value = FLOATING_HIGH
+                value = self._countWireSizes(group)
+                # if sizes[1] < sizes[0]:
+                #     value = FLOATING_LOW
+                # else:
+                #     value = FLOATING_HIGH
         return value
 
-    cdef _addWireToGroup(self, wireIndex, group):
+
+    cdef void _addWireToGroup(self, int wireIndex, stdset[int] & group):
+
+        cdef int ctind, ctIndsSize, t
+
         self.numAddWireToGroup += 1
-        group.add(wireIndex)
-        wire = self._wireList[wireIndex]
+        group.insert(wireIndex)
 
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
 
         # for each transistor which switch other wires into connection
         # with this wire
-        for t in wire.ctInds: 
-            self._addWireTransistor (wireIndex, t, group)
+        ctIndsSize =self._ctInds[wireIndex, 0]
+        for t in range(ctIndsSize):
+            ctind = self._ctInds[wireIndex, t+1]
+            self._addWireTransistor (wireIndex, ctind, group)
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
-    cdef _addWireTransistor(self, int wireIndex, int t, group):
+    cdef void _addWireTransistor(self, int wireIndex, int t, stdset[int] & group):
         # for this wire and this transistor, check if the transistor
         # is on. If it is, add the connected wires recursively
         # 
@@ -832,16 +845,14 @@ cdef class WireCalculator:
         if c2Wire == wireIndex:
             other = c1Wire
         if other == self.vccWireIndex or other == self.gndWireIndex:
-            group.add(other)
+            group.insert(other)
             return
-        if other in group:
+        if group.find(other) != group.end():#  in group: 
             return
         self._addWireToGroup(other, group)
 
-    @cython.boundscheck(False)
-    @cython.nonecheck(False)
-    @cython.initializedcheck(False)
-    cdef _countWireSizes(self, group):
+
+    cdef int _countWireSizes(self, stdset[int] & group):
         cdef int countFl = 0
         cdef int countFh = 0
         cdef int i = 0
@@ -854,7 +865,10 @@ cdef class WireCalculator:
                 countFl += num
             if wire_state == FLOATING_HIGH:
                 countFh += num
-        return [countFl, countFh]
+        if countFh < countFl:
+            return FLOATING_LOW
+        else:
+            return FLOATING_HIGH
 
 
 
