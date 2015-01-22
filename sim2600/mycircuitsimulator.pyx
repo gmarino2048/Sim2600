@@ -600,6 +600,7 @@ cdef class WireCalculator:
         # exception.
         cdef int step = 0
         cdef int stepLimit = 400
+        cdef int a, b
         
         while step < stepLimit:
             #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
@@ -617,10 +618,11 @@ cdef class WireCalculator:
                 self.recalcArray[wireIndex] = False
                 self.numWiresRecalculated += 1
 
-
-            tmp = self.recalcArray
-            self.recalcArray = self.newRecalcArray
-            self.newRecalcArray = tmp
+            for i in range(len(self.recalcArray)):
+                a = self.recalcArray[i]
+                b = self.newRecalcArray[i]
+                self.newRecalcArray[i] = a
+                self.recalcArray[i] = b
 
             self.recalcOrderStack = self.newRecalcOrderStack
             self.newRecalcOrderStack.clear()
