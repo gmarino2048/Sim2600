@@ -520,6 +520,7 @@ cdef int    TW_GATE = 0
 cdef int    TW_S1 = 1
 cdef int    TW_S2 = 2
 
+@cython.final
 cdef class WireCalculator:
     cdef object _wireList
     cdef np.uint8_t[:] _wireState

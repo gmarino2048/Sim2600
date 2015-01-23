@@ -9,7 +9,7 @@ def make_ext(modname, pyxfilename):
     return Extension(name=modname,
                      sources=[pyxfilename],
                      language="c++",
-                     extra_compile_args=['-O3'],
+                     extra_compile_args=['-O3', '-g'],
                      include_dirs=[np.get_include()])
 
 
