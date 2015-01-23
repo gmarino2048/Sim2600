@@ -24,7 +24,8 @@ from array import array
 import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
-from libcpp.set cimport set as stdset
+#from libcpp.set cimport set as stdset
+from libcpp.vector cimport vector as stdset
 import cython
 from cython.operator cimport dereference as deref
 
@@ -487,6 +488,32 @@ class CircuitSimulator(object):
         of.close()
 
 
+# cdef inline int group_contains(stdset[int] & group, int x):
+#     cdef int i
+#     return group.find(x) != group.end()
+    
+#     for i in group:
+#          if x == i:
+#              return True
+#     return False
+         
+# cdef inline void group_insert(stdset[int] & group, int x):
+#     group.insert(x)
+
+cdef inline int group_contains(stdset[int] & group, int x):
+    cdef int i
+    for i in group:
+         if x == i:
+             return True
+    return False
+         
+cdef inline void group_insert(stdset[int] & group, int x):
+    cdef int i
+    for i in group:
+         if x == i:
+             return 
+    group.push_back(x)
+
 
 #cpdef enum TransistorIndexPos:
 cdef int    TW_GATE = 0
@@ -778,7 +805,7 @@ cdef class WireCalculator:
             if wireIndex == self.gndWireIndex:
                 return GROUNDED
             if wireIndex == self.vccWireIndex:
-                if group.find(self.gndWireIndex) != group.end() : #  in group:
+                if group_contains(group, self.gndWireIndex):
                     return GROUNDED
                 else:
                     return HIGH
@@ -818,7 +845,7 @@ cdef class WireCalculator:
         cdef int ctind, ctIndsSize, t
 
         self.numAddWireToGroup += 1
-        group.insert(wireIndex)
+        group_insert(group, wireIndex)
 
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
@@ -847,9 +874,9 @@ cdef class WireCalculator:
         if c2Wire == wireIndex:
             other = c1Wire
         if other == self.vccWireIndex or other == self.gndWireIndex:
-            group.insert(other)
+            group_insert(group, other)
             return
-        if group.find(other) != group.end():#  in group: 
+        if group_contains(group, other): 
             return
         self._addWireToGroup(other, group)
 
