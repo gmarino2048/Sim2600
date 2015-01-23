@@ -12,6 +12,7 @@ ROMS_PITFALL = os.path.join(SRCDIR, 'roms/Pitfall.bin')
 romFile = ROMS_DONKEY_KONG
 #  8kb ROM, spins reading 0x282 switches
 #romFile = 'roms/Asteroids.bin'
+ROMS_ASTEROIDS = os.path.join(SRCDIR, 'roms/Asteroids.bin')
 #  2kb ROM
 #romFile = 'roms/Adventure.bin'
 
