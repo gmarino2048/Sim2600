@@ -25,10 +25,12 @@ import params
 import imageOpenGL
 import imagePIL
 from sim2600Console import Sim2600Console
+import sim6502
+import simTIA
 
 class MainSim:
     def __init__(self):
-        self.imageGL = imageOpenGL.getInterface()
+        self.imageGL = None # imageOpenGL.getInterface()
         self.imagePIL = imagePIL.getInterface()
         self.imageRaw = None
         self.elapsedHalfClocks = 0
@@ -38,7 +40,9 @@ class MainSim:
         # an emulation of the 6532 RIOT (RAM, I/O, Timer), and
         # a cartridge ROM file holding the program instructions.
         #
-        self.sim = Sim2600Console(params.romFile)
+        #self.sim = Sim2600Console(params.romFile)
+        self.sim = Sim2600Console(params.romFile, 
+                                  sim6502.MySim6502, simTIA.MySimTIA)
 
         # For measuring how fast the simulation is running
         self.lastUpdateTimeSec = None
