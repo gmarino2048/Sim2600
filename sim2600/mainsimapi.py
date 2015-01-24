@@ -37,9 +37,7 @@ class MainSim:
     Only render with images, no OpenGL 
     """
     def __init__(self, romFile, imgdir):
-        self.imageGL = None # imageOpenGL.getInterface()
         self.imagePIL = imagePIL.getInterface(imgdir)
-        self.imageRaw = None
         self.elapsedHalfClocks = 0
 
         # The console simulator ties together a simulation
