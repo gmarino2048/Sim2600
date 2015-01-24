@@ -22,15 +22,17 @@ import os, time
 from imageBase import ImageBase
 import params
 
-Image = None
+#Image = None
 
 class ImagePIL(ImageBase):
-    def __init__(self):
+    def __init__(self, imageOutputDir):
+        from PIL import Image as Image
+
         print('Creating ImagePIL class to save frame images')
         ImageBase.__init__(self)
         self.image = Image.new("RGBA", (params.scanlineNumPixels,
                                         params.frameHeightPixels), "white")
-        self.outputDir = params.imageOutputDir
+        self.outputDir = imageOutputDir
         self.frameCount = 0
         self.dateTimeStr = time.strftime('%y_%m%d_%H%M%S')
 
@@ -60,7 +62,7 @@ class ImagePIL(ImageBase):
         self.lastPixelY = 0
 
 def getInterface(imageOutputDir = None):
-    global Image
+    #global Image
     # If we can't import the Python Image Library (PIL), return None
     try:        
         from PIL import Image as Image
@@ -77,5 +79,5 @@ def getInterface(imageOutputDir = None):
         print('Could not create output directory for frame images')
         return None
 
-    return ImagePIL()
+    return ImagePIL(imageOutputDir)
 
