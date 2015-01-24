@@ -59,7 +59,7 @@ class ImagePIL(ImageBase):
         self.lastPixelX = 0
         self.lastPixelY = 0
 
-def getInterface():
+def getInterface(imageOutputDir = None):
     global Image
     # If we can't import the Python Image Library (PIL), return None
     try:        
@@ -69,8 +69,10 @@ def getInterface():
         return None
 
     try:
-        if not os.path.exists(params.imageOutputDir):
-            os.makedirs(params.imageOutputDir)
+        if imageOutputDir is None:
+            imageOutputDir = params.imageOutputDir
+        if not os.path.exists(imageOutputDir):
+            os.makedirs(imageOutputDir)
     except:
         print('Could not create output directory for frame images')
         return None
