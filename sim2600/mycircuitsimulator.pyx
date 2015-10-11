@@ -542,6 +542,7 @@ cdef class WireCalculator:
     # this is a hack because WHO knows how to do this ? NOT ME
     cdef np.int32_t[:, :] _ctInds
     cdef np.int32_t[:, :] _gateInds
+    cdef int _latestHalfClkCount 
 
     def __init__(self, wireList, transistorList, 
                  wireState, wirePulled, transistorState, # all references
@@ -602,6 +603,9 @@ cdef class WireCalculator:
             self._transistorWires[ti, TW_S1] = t.side1WireIndex
             self._transistorWires[ti, TW_S2] = t.side2WireIndex
             
+
+        self._latestHalfClkCount = 0
+
     cdef _prepForRecalc(self):
         self.recalcOrderStack.clear() #  = []
         self.newRecalcOrderStack.clear() #  = []
@@ -630,6 +634,7 @@ cdef class WireCalculator:
         cdef int stepLimit = 400
         cdef int a, b
         cdef int i, s
+        self._latestHalfClkCount = halfClkCount
         while step < stepLimit:
             #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
             #        str(self.recalcOrder[:self.lastRecalcOrder])))
