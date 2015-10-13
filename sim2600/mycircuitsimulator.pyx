@@ -29,8 +29,19 @@ from libcpp.vector cimport vector
 import cython
 from cython.operator cimport dereference as deref
 
+
 import copy
 import sys
+
+
+cdef extern from "cirsim.h" :
+    cdef void test()
+
+    cdef cppclass CPPGroup:
+         CPPGroup() 
+         vector[int] gvec
+         int contains(int)
+         void insert(int) 
 
 cpdef enum WireState:
     PULLED_HIGH  = 1 << 0 # 1 
@@ -501,7 +512,7 @@ class CircuitSimulator(object):
 #     group.insert(x)
 cdef struct Group:
     vector[int] gvec
-    
+
 
 cdef inline int group_contains(Group & group, int x):
     cdef int i
