@@ -634,10 +634,10 @@ cdef class WireCalculator:
         cdef int stepLimit = 400
         cdef int a, b
         cdef int i, s
+
         self._latestHalfClkCount = halfClkCount
         while step < stepLimit:
-            #print('Iter %d, num to recalc %d, %s'%(step, self.lastRecalcOrder,
-            #        str(self.recalcOrder[:self.lastRecalcOrder])))
+            ##print 'Iter %d, num to recalc %d ' %(step, len(self.recalcOrderStack))
 
             if self.recalcOrderStack.empty():
                 break;
@@ -720,7 +720,7 @@ cdef class WireCalculator:
         cdef int transIndex
         cdef int newValue, newHigh, gateState
         cdef int groupWireIndex, gate_inds_cnt, ti
-
+        ##print "_doWireRecalc(%d)" % wireIndex
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
         
@@ -753,23 +753,32 @@ cdef class WireCalculator:
                     self._turnTransistorOff(transIndex)
 
 
-
+    cdef void _scheduleWireRecalc(self, int wireInd):
+        """
+        push this wire onto the recalc order stack if its not
+        already there
+        """
+    
+        if self.newRecalcArray[wireInd] == 0:
+            self.newRecalcArray[wireInd] = 1
+            self.newRecalcOrderStack.push_back(wireInd)
+    
     cdef void _turnTransistorOn(self, int tidx):
         cdef int wireInd
+        ##print "_turnTransistorOn(%d)" % tidx
         self._transistorState[tidx] = NMOS_GATE_HIGH
 
+        
         wireInd = self._transistorWires[tidx, TW_S1]
-        if self.newRecalcArray[wireInd] == 0:
-            self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.push_back(wireInd)
+        self._scheduleWireRecalc(wireInd)
 
         wireInd = self._transistorWires[tidx, TW_S2]
-        if self.newRecalcArray[wireInd] == 0:
-            self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.push_back(wireInd)
+        self._scheduleWireRecalc(wireInd)
 
 
     cdef void _turnTransistorOff(self, int tidx):
+        ##print "_turnTransistorOff(%d)" % tidx
+
         self._transistorState[tidx] = NMOS_GATE_LOW
         cdef int wireInd
 
@@ -779,15 +788,9 @@ cdef class WireCalculator:
         self._floatWire(c1Wire)
         self._floatWire(c2Wire)
 
-        wireInd = c1Wire
-        if self.newRecalcArray[wireInd] == 0:
-            self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.push_back(wireInd)
+        self._scheduleWireRecalc(c1Wire)
+        self._scheduleWireRecalc(c2Wire)
 
-        wireInd = c2Wire
-        if self.newRecalcArray[wireInd] == 0:
-            self.newRecalcArray[wireInd] = 1
-            self.newRecalcOrderStack.push_back(wireInd)
 
     cdef int _getWireValue(self, stdset[int] & group):
         """
@@ -802,6 +805,7 @@ cdef class WireCalculator:
         """
         # TODO PERF: why turn into a list?
         #l = list(set(group))
+        ##print "getting wire value of group of size", group.size()
         cdef int sawFl = False
         cdef int sawFh = False
         cdef int firstval = deref(group.begin())
@@ -847,7 +851,7 @@ cdef class WireCalculator:
 
 
     cdef void _addWireToGroup(self, int wireIndex, stdset[int] & group):
-
+        # Add this wire to the group. 
         cdef int ctind, ctIndsSize, t
 
         self.numAddWireToGroup += 1
@@ -857,7 +861,8 @@ cdef class WireCalculator:
             return
 
         # for each transistor which switch other wires into connection
-        # with this wire
+        # with this wire -- if the tarnsistor is on, add in the switched
+        # wire to the group
         ctIndsSize =self._ctInds[wireIndex, 0]
         for t in range(ctIndsSize):
             ctind = self._ctInds[wireIndex, t+1]
@@ -865,8 +870,10 @@ cdef class WireCalculator:
 
     cdef void _addWireTransistor(self, int wireIndex, int t, stdset[int] & group):
         # for this wire and this transistor, check if the transistor
-        # is on. If it is, add the connected wires recursively
-        # 
+        # is on. If it is, it has then made a connection between the
+        #  wires connected to C1 and C2. 
+
+        # This appears to only be triggered for C1/C2 wires
         self.numAddWireTransistor += 1
         cdef int other = -1
         #trans = self._transistorList[t]
@@ -888,6 +895,7 @@ cdef class WireCalculator:
 
 
     cdef int _countWireSizes(self, stdset[int] & group):
+        ##print "_countWireSizes group.size()=", group.size()
         cdef int countFl = 0
         cdef int countFh = 0
         cdef int i = 0
