@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#cython: language_level=2, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, overflowcheck=False
+#cython: language_level=2, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, overflowcheck=False, profile=True
 
 import os, pickle, traceback
 from array import array
@@ -25,7 +25,7 @@ import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
 #from libcpp.set cimport set as stdset
-from libcpp.vector cimport vector as stdset
+from libcpp.vector cimport vector 
 import cython
 from cython.operator cimport dereference as deref
 
@@ -499,20 +499,23 @@ class CircuitSimulator(object):
          
 # cdef inline void group_insert(stdset[int] & group, int x):
 #     group.insert(x)
+cdef struct Group:
+    vector[int] gvec
+    
 
-cdef inline int group_contains(stdset[int] & group, int x):
+cdef inline int group_contains(Group & group, int x):
     cdef int i
-    for i in group:
+    for i in group.gvec:
          if x == i:
              return True
     return False
          
-cdef inline void group_insert(stdset[int] & group, int x):
+cdef inline void group_insert(Group & group, int x):
     cdef int i
-    for i in group:
+    for i in group.gvec:
          if x == i:
              return 
-    group.push_back(x)
+    group.gvec.push_back(x)
 
 
 #cpdef enum TransistorIndexPos:
@@ -637,7 +640,7 @@ cdef class WireCalculator:
 
         self._latestHalfClkCount = halfClkCount
         while step < stepLimit:
-            ##print 'Iter %d, num to recalc %d ' %(step, len(self.recalcOrderStack))
+            #print 'Iter %d, num to recalc %d ' %(step, len(self.recalcOrderStack))
 
             if self.recalcOrderStack.empty():
                 break;
@@ -720,11 +723,11 @@ cdef class WireCalculator:
         cdef int transIndex
         cdef int newValue, newHigh, gateState
         cdef int groupWireIndex, gate_inds_cnt, ti
-        ##print "_doWireRecalc(%d)" % wireIndex
+        #print "_doWireRecalc(%d)" % wireIndex
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
         
-        cdef stdset[int] group #  = set()
+        cdef Group group #  = set()
 
         # addWireToGroup recursively adds this wire and all wires
         # of connected transistors
@@ -734,7 +737,7 @@ cdef class WireCalculator:
         newHigh = newValue == HIGH or newValue == PULLED_HIGH or \
                   newValue == FLOATING_HIGH
 
-        for groupWireIndex in group:
+        for groupWireIndex in group.gvec:
             if groupWireIndex == self.gndWireIndex or \
                groupWireIndex == self.vccWireIndex:
                 # TODO: remove gnd and vcc from group?
@@ -765,7 +768,7 @@ cdef class WireCalculator:
     
     cdef void _turnTransistorOn(self, int tidx):
         cdef int wireInd
-        ##print "_turnTransistorOn(%d)" % tidx
+        #print "_turnTransistorOn(%d)" % tidx
         self._transistorState[tidx] = NMOS_GATE_HIGH
 
         
@@ -777,7 +780,7 @@ cdef class WireCalculator:
 
 
     cdef void _turnTransistorOff(self, int tidx):
-        ##print "_turnTransistorOff(%d)" % tidx
+        #print "_turnTransistorOff(%d)" % tidx
 
         self._transistorState[tidx] = NMOS_GATE_LOW
         cdef int wireInd
@@ -792,7 +795,7 @@ cdef class WireCalculator:
         self._scheduleWireRecalc(c2Wire)
 
 
-    cdef int _getWireValue(self, stdset[int] & group):
+    cdef int _getWireValue(self, Group & group):
         """
         This function performs group resolution for a collection
         of wires
@@ -805,13 +808,13 @@ cdef class WireCalculator:
         """
         # TODO PERF: why turn into a list?
         #l = list(set(group))
-        ##print "getting wire value of group of size", group.size()
+        #print "getting wire value of group of size", group.size()
         cdef int sawFl = False
         cdef int sawFh = False
-        cdef int firstval = deref(group.begin())
+        cdef int firstval = deref(group.gvec.begin())
         cdef int value = self._wireState[firstval] # l[0]]
         cdef int wire_pulled, wire_state
-        for wireIndex in group:
+        for wireIndex in group.gvec:
             if wireIndex == self.gndWireIndex:
                 return GROUNDED
             if wireIndex == self.vccWireIndex:
@@ -850,10 +853,10 @@ cdef class WireCalculator:
         return value
 
 
-    cdef void _addWireToGroup(self, int wireIndex, stdset[int] & group):
+    cdef void _addWireToGroup(self, int wireIndex, Group & group):
         # Add this wire to the group. 
         cdef int ctind, ctIndsSize, t
-
+        #print "addWireToGroup(%d)" % wireIndex
         self.numAddWireToGroup += 1
         group_insert(group, wireIndex)
 
@@ -868,12 +871,13 @@ cdef class WireCalculator:
             ctind = self._ctInds[wireIndex, t+1]
             self._addWireTransistor (wireIndex, ctind, group)
 
-    cdef void _addWireTransistor(self, int wireIndex, int t, stdset[int] & group):
+    cdef void _addWireTransistor(self, int wireIndex, int t, Group & group):
         # for this wire and this transistor, check if the transistor
         # is on. If it is, it has then made a connection between the
         #  wires connected to C1 and C2. 
 
         # This appears to only be triggered for C1/C2 wires
+        #print "addWireTransistor(wireIndex=%d, t=%d)" % (wireIndex, t)
         self.numAddWireTransistor += 1
         cdef int other = -1
         #trans = self._transistorList[t]
@@ -894,14 +898,14 @@ cdef class WireCalculator:
         self._addWireToGroup(other, group)
 
 
-    cdef int _countWireSizes(self, stdset[int] & group):
+    cdef int _countWireSizes(self, Group & group):
         ##print "_countWireSizes group.size()=", group.size()
         cdef int countFl = 0
         cdef int countFh = 0
         cdef int i = 0
         cdef int num = 0
         cdef int wire_state = 0
-        for i in group:
+        for i in group.gvec:
             wire_state = self._wireState[i]
             num = self._numWires[i]
             if wire_state == FLOATING_LOW:
