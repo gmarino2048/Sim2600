@@ -10,7 +10,7 @@ def make_ext(modname, pyxfilename):
                      sources=[pyxfilename, 'cirsim.cc'],
                      language="c++",
                      extra_compile_args=['-O2', '-g'],
-                     include_dirs=[np.get_include(), '/Users/jonas/projects/neurofixproc/src/Sim2600/sim2600/'])
+                     include_dirs=[np.get_include(), os.path.dirname(os.path.abspath(__file__))])
 
 
 def make_setup_args():

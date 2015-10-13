@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#cython: language_level=2, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, overflowcheck=False, profile=True
+#cython: language_level=2, boundscheck=False, wraparound=False, nonecheck=False, initializedcheck=False, overflowcheck=False
 
 import os, pickle, traceback
 from array import array
@@ -738,7 +738,7 @@ cdef class WireCalculator:
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
         
-        cdef Group group #  = set()
+        cdef CPPGroup group #  = set()
 
         # addWireToGroup recursively adds this wire and all wires
         # of connected transistors
@@ -806,7 +806,7 @@ cdef class WireCalculator:
         self._scheduleWireRecalc(c2Wire)
 
 
-    cdef int _getWireValue(self, Group & group):
+    cdef int _getWireValue(self, CPPGroup & group):
         """
         This function performs group resolution for a collection
         of wires
@@ -829,7 +829,7 @@ cdef class WireCalculator:
             if wireIndex == self.gndWireIndex:
                 return GROUNDED
             if wireIndex == self.vccWireIndex:
-                if group_contains(group, self.gndWireIndex):
+                if group.contains(self.gndWireIndex):
                     return GROUNDED
                 else:
                     return HIGH
@@ -864,12 +864,12 @@ cdef class WireCalculator:
         return value
 
 
-    cdef void _addWireToGroup(self, int wireIndex, Group & group):
+    cdef void _addWireToGroup(self, int wireIndex, CPPGroup & group):
         # Add this wire to the group. 
         cdef int ctind, ctIndsSize, t
         #print "addWireToGroup(%d)" % wireIndex
         self.numAddWireToGroup += 1
-        group_insert(group, wireIndex)
+        group.insert(wireIndex)
 
         if wireIndex == self.gndWireIndex or wireIndex == self.vccWireIndex:
             return
@@ -882,7 +882,7 @@ cdef class WireCalculator:
             ctind = self._ctInds[wireIndex, t+1]
             self._addWireTransistor (wireIndex, ctind, group)
 
-    cdef void _addWireTransistor(self, int wireIndex, int t, Group & group):
+    cdef void _addWireTransistor(self, int wireIndex, int t, CPPGroup & group):
         # for this wire and this transistor, check if the transistor
         # is on. If it is, it has then made a connection between the
         #  wires connected to C1 and C2. 
@@ -902,14 +902,14 @@ cdef class WireCalculator:
         if c2Wire == wireIndex:
             other = c1Wire
         if other == self.vccWireIndex or other == self.gndWireIndex:
-            group_insert(group, other)
+            group.insert( other)
             return
-        if group_contains(group, other): 
+        if group.contains(other): 
             return
         self._addWireToGroup(other, group)
 
 
-    cdef int _countWireSizes(self, Group & group):
+    cdef int _countWireSizes(self, CPPGroup & group):
         ##print "_countWireSizes group.size()=", group.size()
         cdef int countFl = 0
         cdef int countFh = 0
