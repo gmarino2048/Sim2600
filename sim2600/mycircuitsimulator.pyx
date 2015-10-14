@@ -25,7 +25,7 @@ import numpy as np
 cimport numpy as np
 from libcpp.vector cimport vector
 #from libcpp.set cimport set as stdset
-from libcpp.vector cimport vector 
+
 import cython
 from cython.operator cimport dereference as deref
 
@@ -34,12 +34,13 @@ import copy
 import sys
 
 
+
 cdef extern from "cirsim.h" :
     cdef void test()
 
     cdef cppclass CPPGroup:
          CPPGroup() 
-         vector[int] gvec
+         vector[short] gvec
          int contains(int)
          void insert(int) 
 
@@ -538,6 +539,7 @@ cdef int    TW_S2 = 2
 cdef class WireCalculator:
     cdef object _wireList
     cdef np.uint8_t[:] _wireState
+
     cdef np.uint8_t[:] _wirePulled
     cdef np.uint8_t[:] _transistorState
     cdef np.uint8_t[:] recalcArray
@@ -568,6 +570,8 @@ cdef class WireCalculator:
         self._wireList = wireList
         #self._transistorList = transistorList
         self._wireState = wireState
+
+
         self._wirePulled = wirePulled
         self._transistorState = transistorState
 
@@ -782,12 +786,13 @@ cdef class WireCalculator:
         #print "_turnTransistorOn(%d)" % tidx
         self._transistorState[tidx] = NMOS_GATE_HIGH
 
-        
-        wireInd = self._transistorWires[tidx, TW_S1]
-        self._scheduleWireRecalc(wireInd)
 
-        wireInd = self._transistorWires[tidx, TW_S2]
-        self._scheduleWireRecalc(wireInd)
+        cdef int c1Wire = self._transistorWires[tidx, TW_S1]
+        cdef int c2Wire = self._transistorWires[tidx, TW_S2]
+
+        self._scheduleWireRecalc(c1Wire)
+
+        self._scheduleWireRecalc(c2Wire)
 
 
     cdef void _turnTransistorOff(self, int tidx):
@@ -799,6 +804,7 @@ cdef class WireCalculator:
         #t = self._transistorList[tidx]
         cdef int c1Wire = self._transistorWires[tidx, TW_S1]
         cdef int c2Wire = self._transistorWires[tidx, TW_S2]
+
         self._floatWire(c1Wire)
         self._floatWire(c2Wire)
 
@@ -927,6 +933,7 @@ cdef class WireCalculator:
             return FLOATING_LOW
         else:
             return FLOATING_HIGH
+
 
 
 
