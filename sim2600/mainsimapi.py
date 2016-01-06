@@ -36,7 +36,8 @@ class MainSim:
 
     Only render with images, no OpenGL 
     """
-    def __init__(self, romFile, imgdir):
+    def __init__(self, romFile, imgdir, 
+                 sim6502factory = sim6502.MySim6502):
         self.imagePIL = imagePIL.getInterface(imgdir)
         self.elapsedHalfClocks = 0
 
@@ -46,8 +47,7 @@ class MainSim:
         # a cartridge ROM file holding the program instructions.
         #
         #self.sim = Sim2600Console(params.romFile)
-        self.sim = Sim2600Console(romFile, 
-                                  sim6502.MySim6502, simTIA.MySimTIA)
+        self.sim = Sim2600Console(romFile, sim6502factory, simTIA.MySimTIA)
 
         # For measuring how fast the simulation is running
         self.lastUpdateTimeSec = None

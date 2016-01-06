@@ -206,7 +206,7 @@ class Sim6502Sets(CircuitSimulatorSets):
 
 
 class MySim6502(MyCircuitSimulator):
-    def __init__(self):
+    def __init__(self, chipfile = params.chip6502File):
         MyCircuitSimulator.__init__(self)
 
         self.loadCircuit(params.chip6502File)
