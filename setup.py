@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 import numpy as np
 
 setup(name='sim2600',
-      version='0.1',
+      version='0.2',
       description='Simulation of Atari 2600', 
       author='Greg Jones',
       packages=['sim2600'],
