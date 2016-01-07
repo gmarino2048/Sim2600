@@ -209,7 +209,7 @@ class MySim6502(MyCircuitSimulator):
     def __init__(self, chipfile = params.chip6502File):
         MyCircuitSimulator.__init__(self)
 
-        self.loadCircuit(params.chip6502File)
+        self.loadCircuit(chipfile)
 
         # No need to update the names based on params.mos6502WireInit.
         # The names have already been saved in the net_6502.pkl file.
