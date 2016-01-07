@@ -155,7 +155,7 @@ class Sim2600Console:
             estr += 'This is likely a bank switch strobe we have not implemented'
           elif addr >= 0xF000 and addr <= 0xF07F:
             estr += 'This is likely a cartridge RAM write we have not implemented'
-          raise RuntimeException(estr)
+            raise Exception(estr)
                     
       # 6502 shouldn't write to where we keep the console switches
       if (addr == 0x282 or addr == 0x280) and not setup:
