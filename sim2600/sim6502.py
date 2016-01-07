@@ -208,7 +208,7 @@ class Sim6502Sets(CircuitSimulatorSets):
 class MySim6502(MyCircuitSimulator):
     def __init__(self, chipfile = params.chip6502File):
         MyCircuitSimulator.__init__(self)
-
+        print "MySim6502 Loading", chipfile
         self.loadCircuit(chipfile)
 
         # No need to update the names based on params.mos6502WireInit.

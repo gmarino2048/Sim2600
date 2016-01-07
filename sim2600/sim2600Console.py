@@ -150,7 +150,7 @@ class Sim2600Console:
             self.bankSwitchROMOffset = 0x1000
         else:
           estr = 'ERROR: 6507 writing to ROM space addr ' + \
-                 '0x4.4%X data 0x%2.2X  '%(addr, data)
+                 '0x4.4%X data 0x%2.2X  '%(addr, byteValue)
           if addr >= 0xFFF4 and addr <= 0xFFFB:
             estr += 'This is likely a bank switch strobe we have not implemented'
           elif addr >= 0xF000 and addr <= 0xF07F:
