@@ -396,7 +396,7 @@ class CircuitSimulator(object):
             s1 = fetSide1WireInds[i]
             s2 = fetSide2WireInds[i]
             gate = fetGateWireInds[i]
-            
+            print 'gate input is', gate
             if s1 == noWire:
                 assert s2 == noWire
                 assert gate == noWire
