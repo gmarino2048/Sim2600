@@ -155,7 +155,7 @@ class Sim2600Console:
             estr += 'This is likely a bank switch strobe we have not implemented'
           elif addr >= 0xF000 and addr <= 0xF07F:
             estr += 'This is likely a cartridge RAM write we have not implemented'
-            raise Exception(estr)
+            raise RuntimeError(estr)
                     
       # 6502 shouldn't write to where we keep the console switches
       if (addr == 0x282 or addr == 0x280) and not setup:
@@ -207,7 +207,7 @@ class Sim2600Console:
         self.programLen = programLen
         if not programLen in [2048, 4096, 8192]:
             estr = 'No support for program byte list of length %d'%(programLen)
-            raise RuntimeException(estr)
+            raise RuntimeError(estr)
 
         if programLen == 2048:
             # Duplicate ROM contents so it fills all of 0xF000 - 0xFFFF
