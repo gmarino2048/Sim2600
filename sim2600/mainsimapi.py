@@ -53,10 +53,14 @@ class MainSim:
         self.lastUpdateTimeSec = None
 
                 
-    def updateSimOneFrame(self, logger=None):
+    def updateSimOneFrame(self, logger=None, eventLogger = None):
         tia = self.sim.simTIA
         pixels = []
         
+        if eventLogger is None:
+            def eventLogger(*args):
+                pass
+
         i = 0
         while i < params.numTIAHalfClocksPerRender:
             self.sim.advanceOneHalfClock()
@@ -67,6 +71,8 @@ class MainSim:
                 restartImage = False
                 if self.sim.simTIA.isHigh(self.sim.simTIA.vsync):
                     print('VSYNC high at TIA halfclock %d'%(tia.halfClkCount))
+                    eventLogger('VSYNC high', tia.halfClkCount, 
+                                self.sim.sim6507.halfClkCount)
                     restartImage = True
 
                 # grayscale
@@ -79,10 +85,17 @@ class MainSim:
                 if self.imagePIL != None:
                     if restartImage == True:
                         self.imagePIL.restartImage()
+                        eventLogger('restartImage', tia.halfClkCount, 
+                                    self.sim.sim6507.halfClkCount)
+
                     self.imagePIL.setNextPixel(rgba)
+                    eventLogger('setNextPixel', tia.halfClkCount, 
+                                self.sim.sim6507.halfClkCount, rgba)
 
                 if self.sim.simTIA.isHigh(self.sim.simTIA.vblank):
                     print('VBLANK at TIA halfclock %d'%(tia.halfClkCount))
+                    eventLogger('VBLANK', tia.halfClkCount, 
+                                self.sim.sim6507.halfClkCount)
 
                 #cpuStr = self.sim6502.getStateStr1()
                 #tiaStr = self.simTIA.getTIAStateStr1()
