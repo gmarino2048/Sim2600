@@ -1,2 +1,6 @@
 *.pyc
 *~
+*.pyxbldc
+
+# Vscode Config Directory
+.vscode/
