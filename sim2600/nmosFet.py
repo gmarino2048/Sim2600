@@ -38,7 +38,7 @@ class NmosFet:
         self.index = idIndex
 
     def __repr__(self):
-        rstr = 'NFET %d: %d gate %d [%d, %d]'%(self.index, self.state,
-               self.gateWireIndex, self.size1WireIndex, self.side2WireIndex)
+        rstr = 'NFET %d: %d gate %d [%d, %d]'%(self.index, self.gateState,
+               self.gateWireIndex, self.side1WireIndex, self.side2WireIndex)
         return rstr
 

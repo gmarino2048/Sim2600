@@ -60,7 +60,7 @@ class Wire:
         self.state = pulled
 
     def __repr__(self):
-        rstr = 'Wire %d "%s": %d  ct %s gates %s'%(self.idIndex, self.name,
+        rstr = 'Wire %d "%s": %d  ct %s gates %s'%(self.index, self.name,
                self.state, str(self.ctInds), str(self.gateInds))
         return rstr
 
