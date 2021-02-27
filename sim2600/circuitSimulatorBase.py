@@ -298,6 +298,13 @@ class CircuitSimulatorBase:
                 self.wireNames[name] = k
                 i += 1
 
+
+    def getWires(self):
+        return self.wireList
+
+    def getTransistors(self):
+        return self.transistorList
+
     def getWiresState(self):
         return [w.state for w in self.wireList]
 
