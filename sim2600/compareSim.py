@@ -33,9 +33,15 @@ class MainSim:
         # For measuring how fast the simulation is running
         self.lastUpdateTimeSec = None
 
-    def rumsim(self, halfClocks=100):
+    def runsim(self, halfClocks=100):
         for i in range(halfClocks):
             self.sim.advanceOneHalfClock()
+            
+            for wire in self.sim.sim6507.getWires():
+                print(wire)
+
+            for transistor in self.sim.sim6507.getTransistors():
+                print(transistor)
 
         # if self.lastUpdateTimeSec != None:
         #     elapsedSec = time.time() - self.lastUpdateTimeSec
