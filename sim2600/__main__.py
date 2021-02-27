@@ -1,5 +1,6 @@
-from .mainSim import printStartupMsg, MainSim
+from .mainSim import printStartupMsg
+from .compareSim import MainSim
 
 printStartupMsg()
-MainSim()
+sim = MainSim()
 print('Exiting mainSim.py')
