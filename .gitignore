@@ -1,6 +1,10 @@
 *.pyc
 *~
 *.pyxbldc
+**/*.cpp
 
 # Vscode Config Directory
 .vscode/
+
+# Setup.py build directory
+build/
