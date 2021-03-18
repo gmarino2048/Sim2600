@@ -21,6 +21,7 @@
 
 import time
 import params
+import database
 
 from sim2600Console import Sim2600Console
 
@@ -33,15 +34,21 @@ class MainSim:
         # For measuring how fast the simulation is running
         self.lastUpdateTimeSec = None
 
-    def runsim(self, halfClocks=100):
+    def runsim(self, halfClocks=100, outfile='results.db'):
+        dbmgr = database.DatabaseManager(outfile)
         for i in range(halfClocks):
             self.sim.advanceOneHalfClock()
+            dbmgr.commit(
+                i,
+                self.sim.sim6507.getWires(),
+                self.sim.sim6507.getTransistors()
+            )
             
-            for wire in self.sim.sim6507.getWires():
-                print(wire)
+            # for wire in self.sim.sim6507.getWires():
+            #     print(wire)
 
-            for transistor in self.sim.sim6507.getTransistors():
-                print(transistor)
+            # for transistor in self.sim.sim6507.getTransistors():
+            #     print(transistor)
 
         # if self.lastUpdateTimeSec != None:
         #     elapsedSec = time.time() - self.lastUpdateTimeSec
