@@ -8,12 +8,12 @@ pipeline {
     stages{
         stage("Build"){
             steps{
-                sh 'python setup.py'
+                sh 'python setup.py build'
             }
         }
         stage("Install"){
             steps{
-                sh 'pip install .'
+                sh 'python setup.py install'
             }
         }
     }
