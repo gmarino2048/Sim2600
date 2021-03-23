@@ -13,7 +13,7 @@ pipeline {
         }
         stage("Install"){
             steps{
-                sh 'python setup.py install'
+                sh 'python setup.py install --user'
             }
         }
     }
