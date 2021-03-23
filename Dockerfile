@@ -14,6 +14,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt -y install \
     python-wheel \
     python-setuptools
 
-RUN pip install Cython
+RUN pip install Cython==0.23.4
 RUN pip install PyOpenGL
 RUN pip install Pillow
