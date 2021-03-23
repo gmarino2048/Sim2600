@@ -1,8 +1,8 @@
 FROM ubuntu:xenial
 
 RUN DEBIAN_FRONTEND=noninteractive apt update
-RUN DEBIAN_FRONTEND=noninteractive apt upgrade
-RUN DEBIAN_FRONTEND=noninteractive apt install \
+RUN DEBIAN_FRONTEND=noninteractive apt -y upgrade
+RUN DEBIAN_FRONTEND=noninteractive apt -y install \
     build-essential \
     freeglut3 \
     freeglut3-dev \
