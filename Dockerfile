@@ -1,4 +1,4 @@
-FROM ubuntu-xenial
+FROM ubuntu:xenial
 
 RUN DEBIAN-FRONTEND=noninteractive apt update
 RUN DEBIAN-FRONTEND=noninteractive apt upgrade
