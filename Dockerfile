@@ -13,5 +13,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt -y install \
     python-wheel \
     python-setuptools
 
-RUN pip install pil
-RUN pip install pillow
+RUN pip install Cython
+RUN pip install PyOpenGL
+RUN pip install Pillow
