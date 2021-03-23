@@ -8,6 +8,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt -y install \
     freeglut3-dev \
     python \
     python-dev \
+    python-numpy \
     python-pip \
     python-pil \
     python-wheel \
